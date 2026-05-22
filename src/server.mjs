@@ -8,6 +8,9 @@ import fs from 'fs/promises';
 import { createReadStream } from 'fs';
 import { ZipArchive } from 'archiver';
 import { runCrawlerForUrl } from './crawl.mjs';
+import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { SSEServerTransport } from '@modelcontextprotocol/sdk/server/sse.js';
+import { z } from 'zod';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -197,8 +200,147 @@ app.get('/api/download/:domain', async (req, res) => {
   archive.finalize();
 });
 
+// ==========================================
+// Native Model Context Protocol (MCP) Setup
+// ==========================================
+
+const mcpServer = new McpServer({
+  name: "funnel-aspirator-mcp",
+  version: "1.0.0",
+});
+
+// Tool 1: crawl_funnel
+mcpServer.registerTool(
+  "crawl_funnel",
+  {
+    description: "Crawl a website funnel, extract its pages, HTML rendered, and screenshots.",
+    inputSchema: z.object({
+      url: z.string().url().describe("The full URL of the website funnel to crawl"),
+    }),
+  },
+  async ({ url }) => {
+    try {
+      console.log(`[MCP] Starting crawl for: ${url}`);
+      const result = await runCrawlerForUrl(url);
+      return {
+        content: [{ type: "text", text: JSON.stringify({ success: true, result }, null, 2) }]
+      };
+    } catch (error) {
+      console.error(`[MCP] Crawl failed for ${url}:`, error);
+      return {
+        isError: true,
+        content: [{ type: "text", text: `Crawl failed: ${error.message}` }]
+      };
+    }
+  }
+);
+
+// Tool 2: list_crawled_domains
+mcpServer.registerTool(
+  "list_crawled_domains",
+  {
+    description: "List all previously crawled domains along with basic statistics (e.g. number of pages).",
+    inputSchema: z.object({}),
+  },
+  async () => {
+    try {
+      const items = await fs.readdir(EXPORTS_DIR, { withFileTypes: true });
+      const results = [];
+      
+      for (const item of items) {
+        if (item.isDirectory()) {
+          const sitemapPath = path.join(EXPORTS_DIR, item.name, 'sitemap.json');
+          try {
+            const sitemapData = await fs.readFile(sitemapPath, 'utf8');
+            const pages = JSON.parse(sitemapData);
+            let thumbnailUrl = null;
+            if (pages.length > 0 && pages[0].screenshot) {
+              thumbnailUrl = `/exports/${item.name}/${pages[0].screenshot}`;
+            }
+
+            results.push({
+              domain: item.name,
+              pagesCount: pages.length,
+              thumbnailUrl: thumbnailUrl,
+              date: pages.length > 0 ? pages[0].title : 'Unknown'
+            });
+          } catch (e) {
+            results.push({ domain: item.name, pagesCount: 0, error: 'No sitemap found' });
+          }
+        }
+      }
+      return {
+        content: [{ type: "text", text: JSON.stringify({ success: true, results }, null, 2) }]
+      };
+    } catch (error) {
+      return {
+        isError: true,
+        content: [{ type: "text", text: `Failed to list crawled domains: ${error.message}` }]
+      };
+    }
+  }
+);
+
+// Tool 3: get_crawl_details
+mcpServer.registerTool(
+  "get_crawl_details",
+  {
+    description: "Get detailed crawl results for a specific domain, including sitemap.json info, lists of HTML files and screenshots.",
+    inputSchema: z.object({
+      domain: z.string().describe("The hostname/domain name folder to retrieve details for (e.g. 'example.com')"),
+    }),
+  },
+  async ({ domain }) => {
+    const sitemapPath = path.join(EXPORTS_DIR, domain, 'sitemap.json');
+    try {
+      const sitemapData = await fs.readFile(sitemapPath, 'utf8');
+      return {
+        content: [{ type: "text", text: JSON.stringify({ success: true, domain, pages: JSON.parse(sitemapData) }, null, 2) }]
+      };
+    } catch (error) {
+      return {
+        isError: true,
+        content: [{ type: "text", text: `Domain or sitemap not found for ${domain}: ${error.message}` }]
+      };
+    }
+  }
+);
+
+// Multi-client session storage for SSE
+const transports = new Map();
+
+// Route to initialize SSE transport session
+app.get("/sse", async (req, res) => {
+  console.log("[MCP] New SSE connection requested");
+  const transport = new SSEServerTransport("/messages", res);
+  
+  transports.set(transport.sessionId, transport);
+  
+  res.on("close", () => {
+    console.log(`[MCP] SSE connection closed for session: ${transport.sessionId}`);
+    transports.delete(transport.sessionId);
+  });
+
+  await mcpServer.connect(transport);
+  console.log(`[MCP] SSE connection established for session: ${transport.sessionId}`);
+});
+
+// Route to process JSON-RPC messages from SSE client
+app.post("/messages", async (req, res) => {
+  const { sessionId } = req.query;
+  const transport = transports.get(sessionId);
+  
+  if (!transport) {
+    console.warn(`[MCP] Messages POST received for unknown session: ${sessionId}`);
+    return res.status(400).send("No transport found for sessionId");
+  }
+  
+  await transport.handlePostMessage(req, res, req.body);
+});
+
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 Server running at http://0.0.0.0:${PORT}`);
   console.log(`📄 Swagger UI available at http://0.0.0.0:${PORT}/api/docs`);
+  console.log(`🔌 MCP SSE Endpoint active at http://0.0.0.0:${PORT}/sse`);
 });

@@ -2,3 +2,4 @@ node_modules/
 exports/
 .DS_Store
 .env
+.npm-cache/
