@@ -9,6 +9,9 @@ RUN npm install
 # Copy application files
 COPY . .
 
+# Create volume for persistent exports
+VOLUME ["/app/exports"]
+
 # Expose port
 EXPOSE 3000
 
