@@ -6,9 +6,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import fs from 'fs/promises';
 import { createReadStream } from 'fs';
-import { createRequire } from 'module';
-const require = createRequire(import.meta.url);
-const archiver = require('archiver');
+import { ZipArchive } from 'archiver';
 import { runCrawlerForUrl } from './crawl.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -188,7 +186,7 @@ app.get('/api/download/:domain', async (req, res) => {
   }
 
   res.attachment(`${domain}-export.zip`);
-  const archive = archiver('zip', { zlib: { level: 9 } });
+  const archive = new ZipArchive({ zlib: { level: 9 } });
 
   archive.on('error', (err) => {
     res.status(500).send({ error: err.message });
