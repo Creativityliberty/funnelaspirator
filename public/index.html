@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Funnel Scraper Pro</title>
+    <meta name="description" content="Local web crawler for auditing and exporting funnels in rendered HTML, screenshots, and JSON.">
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="background-orbs">
+        <div class="orb orb-1"></div>
+        <div class="orb orb-2"></div>
+        <div class="orb orb-3"></div>
+    </div>
+
+    <main class="container">
+        <header>
+            <h1>Funnel Scraper <span class="highlight">Pro</span></h1>
+            <p>Audit and extract any marketing funnel with precision.</p>
+        </header>
+
+        <section class="glass-panel crawler-card">
+            <h2>Launch New Crawl</h2>
+            <form id="crawl-form">
+                <div class="input-group">
+                    <input type="url" id="url-input" placeholder="https://example.com" required>
+                    <button type="submit" id="crawl-btn">
+                        <span class="btn-text">Start Crawl</span>
+                        <div class="loader-spinner hidden" id="crawl-loader"></div>
+                    </button>
+                </div>
+            </form>
+            <div id="status-message" class="hidden"></div>
+        </section>
+
+        <section class="results-section">
+            <div class="section-header">
+                <h2>Recent Exports</h2>
+                <button id="refresh-btn" class="icon-btn" title="Refresh">
+                    <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="23 4 23 10 17 10"></polyline>
+                        <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
+                    </svg>
+                </button>
+            </div>
+            
+            <div id="results-grid" class="grid">
+                <!-- Results injected here by JS -->
+            </div>
+            <div id="results-loader" class="loader-spinner hidden"></div>
+        </section>
+        
+        <div class="links-footer">
+            <a href="/api/docs" target="_blank" class="glass-btn">
+                <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                    <polyline points="14 2 14 8 20 8"></polyline>
+                    <line x1="16" y1="13" x2="8" y2="13"></line>
+                    <line x1="16" y1="17" x2="8" y2="17"></line>
+                    <polyline points="10 9 9 9 8 9"></polyline>
+                </svg>
+                Swagger API Docs
+            </a>
+        </div>
+    </main>
+
+    <!-- Modal for details -->
+    <div id="details-modal" class="modal hidden">
+        <div class="modal-content glass-panel">
+            <span id="close-modal" class="close-btn">&times;</span>
+            <div class="modal-header">
+                <h2 id="modal-domain-title">Domain.com</h2>
+                <a id="download-zip-btn" href="#" class="glass-btn download-btn">
+                    <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                        <polyline points="7 10 12 15 17 10"></polyline>
+                        <line x1="12" y1="15" x2="12" y2="3"></line>
+                    </svg>
+                    Download ZIP
+                </a>
+            </div>
+            <div class="modal-body">
+                <div id="modal-loader" class="loader-spinner"></div>
+                <div id="modal-pages-list" class="pages-list hidden">
+                    <!-- Pages will be injected here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>

@@ -1,0 +1,23 @@
+{
+  "name": "funnel-scraper-mvp",
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Crawler local pour auditer et exporter des funnels en HTML rendu, screenshots et JSON.",
+  "scripts": {
+    "dev": "node src/server.mjs",
+    "crawl": "node src/crawl.mjs",
+    "install:browsers": "playwright install chromium"
+  },
+  "dependencies": {
+    "archiver": "^8.0.0",
+    "cheerio": "^1.0.0",
+    "cors": "^2.8.6",
+    "express": "^5.2.1",
+    "playwright": "^1.49.0",
+    "swagger-jsdoc": "^6.2.8",
+    "swagger-ui-express": "^5.0.1"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

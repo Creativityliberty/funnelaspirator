@@ -1,0 +1,15 @@
+{
+  "manifest_version": 3,
+  "name": "Funnel URL Grabber",
+  "version": "0.1.0",
+  "description": "Copie l'URL de l'onglet actif pour l'ajouter au crawler local.",
+  "permissions": [
+    "tabs",
+    "activeTab",
+    "clipboardWrite"
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Copier URL funnel"
+  }
+}
