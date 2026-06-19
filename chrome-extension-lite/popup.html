@@ -2,18 +2,369 @@
 <html lang="fr">
 <head>
   <meta charset="utf-8">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <style>
-    body { font-family: Arial, sans-serif; width: 280px; padding: 12px; }
-    button { width: 100%; padding: 10px; cursor: pointer; }
-    code { display:block; margin-top:10px; white-space:normal; word-break:break-all; }
-    .ok { color: #137333; margin-top: 8px; }
+    :root {
+      --bg-gradient: linear-gradient(135deg, #100b26 0%, #1e0f3c 100%);
+      --accent-color: #8a2387;
+      --accent-gradient: linear-gradient(135deg, #7f00ff 0%, #ff007f 100%);
+      --button-hover-grad: linear-gradient(135deg, #8f1fff 0%, #ff1f8f 100%);
+      --text-main: #ffffff;
+      --text-muted: #b5a9df;
+      --card-bg: rgba(255, 255, 255, 0.05);
+      --card-border: rgba(255, 255, 255, 0.08);
+      --success-color: #00e676;
+      --error-color: #ff1744;
+      --font-family: 'Outfit', sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      width: 320px;
+      background: var(--bg-gradient);
+      color: var(--text-main);
+      font-family: var(--font-family);
+      padding: 16px;
+      overflow-x: hidden;
+    }
+
+    /* Header styling */
+    .header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 16px;
+      border-bottom: 1px solid var(--card-border);
+      padding-bottom: 12px;
+    }
+
+    .logo-container {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      background: var(--accent-gradient);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 12px rgba(127, 0, 255, 0.3);
+    }
+
+    .logo-container svg {
+      width: 18px;
+      height: 18px;
+      fill: #ffffff;
+    }
+
+    .title-wrapper h3 {
+      font-size: 16px;
+      font-weight: 600;
+      letter-spacing: -0.3px;
+      background: linear-gradient(90deg, #ffffff, #f27121);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .title-wrapper span {
+      font-size: 10px;
+      color: var(--text-muted);
+      font-weight: 400;
+    }
+
+    /* Active Tab Card */
+    .tab-card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 12px;
+      padding: 12px;
+      margin-bottom: 16px;
+      backdrop-filter: blur(10px);
+      box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.2);
+    }
+
+    .tab-label {
+      font-size: 11px;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+      display: block;
+    }
+
+    .tab-info {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .tab-icon {
+      width: 16px;
+      height: 16px;
+      flex-shrink: 0;
+      border-radius: 2px;
+    }
+
+    .tab-url {
+      font-size: 13px;
+      font-weight: 400;
+      color: var(--text-main);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      direction: rtl; /* helps show the end/path if it's long */
+      text-align: left;
+      width: 100%;
+    }
+
+    /* Action Buttons */
+    .btn-group {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+
+    .btn {
+      width: 100%;
+      padding: 12px;
+      border: none;
+      border-radius: 8px;
+      color: #ffffff;
+      font-family: var(--font-family);
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .btn-primary {
+      background: var(--accent-gradient);
+      box-shadow: 0 4px 15px rgba(255, 0, 127, 0.2);
+    }
+
+    .btn-primary:hover {
+      background: var(--button-hover-grad);
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(255, 0, 127, 0.35);
+    }
+
+    .btn-primary:active {
+      transform: translateY(0);
+    }
+
+    .btn-secondary {
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .btn-secondary:hover {
+      background: rgba(255, 255, 255, 0.15);
+      transform: translateY(-2px);
+    }
+
+    .btn-secondary:active {
+      transform: translateY(0);
+    }
+
+    /* Expandable Settings */
+    .settings-toggle {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 11px;
+      color: var(--text-muted);
+      cursor: pointer;
+      padding: 4px 0;
+      margin-bottom: 8px;
+      user-select: none;
+    }
+
+    .settings-toggle:hover {
+      color: var(--text-main);
+    }
+
+    .settings-panel {
+      background: rgba(0, 0, 0, 0.2);
+      border-radius: 8px;
+      padding: 10px;
+      margin-bottom: 16px;
+      display: none;
+      border: 1px solid rgba(255, 255, 255, 0.04);
+    }
+
+    .settings-panel.open {
+      display: block;
+      animation: slideDown 0.25s ease-out;
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .form-group label {
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    .form-group input {
+      background: rgba(0, 0, 0, 0.4);
+      border: 1px solid var(--card-border);
+      border-radius: 6px;
+      padding: 8px;
+      color: #ffffff;
+      font-family: var(--font-family);
+      font-size: 12px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .form-group input:focus {
+      border-color: #7f00ff;
+    }
+
+    /* Status Notifications */
+    .status-alert {
+      padding: 10px 12px;
+      border-radius: 8px;
+      font-size: 12px;
+      line-height: 1.4;
+      display: none;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 12px;
+      animation: fadeIn 0.3s ease-out;
+    }
+
+    .status-alert.success {
+      display: flex;
+      background: rgba(0, 230, 118, 0.1);
+      border: 1px solid rgba(0, 230, 118, 0.2);
+      color: var(--success-color);
+    }
+
+    .status-alert.error {
+      display: flex;
+      background: rgba(255, 23, 68, 0.1);
+      border: 1px solid rgba(255, 23, 68, 0.2);
+      color: var(--error-color);
+    }
+
+    .status-alert.info {
+      display: flex;
+      background: rgba(127, 0, 255, 0.1);
+      border: 1px solid rgba(127, 0, 255, 0.2);
+      color: var(--text-muted);
+    }
+
+    /* Spinner */
+    .spinner {
+      width: 14px;
+      height: 14px;
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      border-top-color: #ffffff;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      flex-shrink: 0;
+    }
+
+    /* Animations */
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(4px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes slideDown {
+      from { opacity: 0; max-height: 0; }
+      to { opacity: 1; max-height: 100px; }
+    }
+
+    /* Footer */
+    .footer {
+      text-align: center;
+      font-size: 10px;
+      color: rgba(255, 255, 255, 0.2);
+      margin-top: 8px;
+      letter-spacing: 0.5px;
+    }
   </style>
 </head>
 <body>
-  <h3>Funnel URL Grabber</h3>
-  <button id="copy">Copier l'URL courante</button>
-  <div id="status"></div>
-  <code id="url"></code>
+  <div class="header">
+    <div class="logo-container">
+      <!-- Funnel SVG Icon -->
+      <svg viewBox="0 0 24 24">
+        <path d="M10 18h4v-2h-4v2zM3 3v2l7 8v6l4 2v-8l7-8V3H3z"/>
+      </svg>
+    </div>
+    <div class="title-wrapper">
+      <h3>Funnel Aspirator</h3>
+      <span>Nümtema Flow OS</span>
+    </div>
+  </div>
+
+  <div class="tab-card">
+    <span class="tab-label">Page active</span>
+    <div class="tab-info">
+      <img id="favicon" class="tab-icon" src="icons/icon-16.png" alt="favicon" style="display:none;">
+      <span id="url" class="tab-url">Chargement...</span>
+    </div>
+  </div>
+
+  <div id="status-alert" class="status-alert">
+    <div id="status-icon"></div>
+    <span id="status-text"></span>
+  </div>
+
+  <div class="btn-group">
+    <button id="copy" class="btn btn-primary">
+      <!-- Clipboard icon -->
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+      </svg>
+      Copier l'URL
+    </button>
+    
+    <button id="crawl" class="btn btn-secondary">
+      <!-- Rocket icon -->
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M4.5 16.5c-1.5 1.25-2.5 3.5-2.5 3.5s2.25-1 3.5-2.5M12 2C6.5 2 2 6.5 2 12c0 2.5 1 4 2 5l6.5-6.5L14 14l-6.5 6.5c1 1 2.5 2 5 2 5.5 0 10-4.5 10-10C22 6.5 17.5 2 12 2z"></path>
+      </svg>
+      Lancer l'audit (Crawl)
+    </button>
+  </div>
+
+  <div id="settings-toggle" class="settings-toggle">
+    <span>Configuration serveur</span>
+    <span id="toggle-arrow">▼</span>
+  </div>
+
+  <div id="settings-panel" class="settings-panel">
+    <div class="form-group">
+      <label for="server-url">URL de l'API Scraper</label>
+      <input type="text" id="server-url" value="http://localhost:3000">
+    </div>
+  </div>
+
+  <div class="footer">
+    INTELLIGENT FUNNEL GRABBER v0.2.0
+  </div>
+
   <script src="popup.js"></script>
 </body>
 </html>

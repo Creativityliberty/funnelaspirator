@@ -1,15 +1,30 @@
 {
   "manifest_version": 3,
   "name": "Funnel URL Grabber",
-  "version": "0.1.0",
-  "description": "Copie l'URL de l'onglet actif pour l'ajouter au crawler local.",
+  "version": "0.2.0",
+  "description": "Copie l'URL de l'onglet actif et lance des audits de funnels en un clic.",
   "permissions": [
     "tabs",
     "activeTab",
-    "clipboardWrite"
+    "clipboardWrite",
+    "storage"
   ],
+  "host_permissions": [
+    "http://localhost:3000/*",
+    "https://aspirator.coolify.dallico.com/*"
+  ],
+  "icons": {
+    "16": "icons/icon-16.png",
+    "48": "icons/icon-48.png",
+    "128": "icons/icon-128.png"
+  },
   "action": {
     "default_popup": "popup.html",
-    "default_title": "Copier URL funnel"
+    "default_title": "Funnel URL Grabber",
+    "default_icon": {
+      "16": "icons/icon-16.png",
+      "48": "icons/icon-48.png",
+      "128": "icons/icon-128.png"
+    }
   }
 }
