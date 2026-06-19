@@ -206,122 +206,126 @@ app.get('/api/download/:domain', async (req, res) => {
 // Native Model Context Protocol (MCP) Setup
 // ==========================================
 
-const mcpServer = new McpServer({
-  name: "funnel-aspirator-mcp",
-  version: "1.0.0",
-});
+function createMcpServer() {
+  const mcpServer = new McpServer({
+    name: "funnel-aspirator-mcp",
+    version: "1.0.0",
+  });
 
-// Tool 1: crawl_funnel
-mcpServer.registerTool(
-  "crawl_funnel",
-  {
-    description: "Crawl a website funnel, extract its pages, HTML rendered, and screenshots.",
-    inputSchema: z.object({
-      url: z.string().url().describe("The full URL of the website funnel to crawl"),
-    }),
-    annotations: {
-      readOnlyHint: false,
-      openWorldHint: true,
-      destructiveHint: false
+  // Tool 1: crawl_funnel
+  mcpServer.registerTool(
+    "crawl_funnel",
+    {
+      description: "Crawl a website funnel, extract its pages, HTML rendered, and screenshots.",
+      inputSchema: z.object({
+        url: z.string().url().describe("The full URL of the website funnel to crawl"),
+      }),
+      annotations: {
+        readOnlyHint: false,
+        openWorldHint: true,
+        destructiveHint: false
+      }
+    },
+    async ({ url }) => {
+      try {
+        console.log(`[MCP] Starting crawl for: ${url}`);
+        const result = await runCrawlerForUrl(url);
+        return {
+          structuredContent: { success: true, result },
+          content: [{ type: "text", text: JSON.stringify({ success: true, result }, null, 2) }]
+        };
+      } catch (error) {
+        console.error(`[MCP] Crawl failed for ${url}:`, error);
+        return {
+          isError: true,
+          content: [{ type: "text", text: `Crawl failed: ${error.message}` }]
+        };
+      }
     }
-  },
-  async ({ url }) => {
-    try {
-      console.log(`[MCP] Starting crawl for: ${url}`);
-      const result = await runCrawlerForUrl(url);
-      return {
-        structuredContent: { success: true, result },
-        content: [{ type: "text", text: JSON.stringify({ success: true, result }, null, 2) }]
-      };
-    } catch (error) {
-      console.error(`[MCP] Crawl failed for ${url}:`, error);
-      return {
-        isError: true,
-        content: [{ type: "text", text: `Crawl failed: ${error.message}` }]
-      };
-    }
-  }
-);
+  );
 
-// Tool 2: list_crawled_domains
-mcpServer.registerTool(
-  "list_crawled_domains",
-  {
-    description: "List all previously crawled domains along with basic statistics (e.g. number of pages).",
-    inputSchema: z.object({}),
-    annotations: {
-      readOnlyHint: true
-    }
-  },
-  async () => {
-    try {
-      const items = await fs.readdir(EXPORTS_DIR, { withFileTypes: true });
-      const results = [];
-      
-      for (const item of items) {
-        if (item.isDirectory()) {
-          const sitemapPath = path.join(EXPORTS_DIR, item.name, 'sitemap.json');
-          try {
-            const sitemapData = await fs.readFile(sitemapPath, 'utf8');
-            const pages = JSON.parse(sitemapData);
-            let thumbnailUrl = null;
-            if (pages.length > 0 && pages[0].screenshot) {
-              thumbnailUrl = `/exports/${item.name}/${pages[0].screenshot}`;
+  // Tool 2: list_crawled_domains
+  mcpServer.registerTool(
+    "list_crawled_domains",
+    {
+      description: "List all previously crawled domains along with basic statistics (e.g. number of pages).",
+      inputSchema: z.object({}),
+      annotations: {
+        readOnlyHint: true
+      }
+    },
+    async () => {
+      try {
+        const items = await fs.readdir(EXPORTS_DIR, { withFileTypes: true });
+        const results = [];
+        
+        for (const item of items) {
+          if (item.isDirectory()) {
+            const sitemapPath = path.join(EXPORTS_DIR, item.name, 'sitemap.json');
+            try {
+              const sitemapData = await fs.readFile(sitemapPath, 'utf8');
+              const pages = JSON.parse(sitemapData);
+              let thumbnailUrl = null;
+              if (pages.length > 0 && pages[0].screenshot) {
+                thumbnailUrl = `/exports/${item.name}/${pages[0].screenshot}`;
+              }
+
+              results.push({
+                domain: item.name,
+                pagesCount: pages.length,
+                thumbnailUrl: thumbnailUrl,
+                date: pages.length > 0 ? pages[0].title : 'Unknown'
+              });
+            } catch (e) {
+              results.push({ domain: item.name, pagesCount: 0, error: 'No sitemap found' });
             }
-
-            results.push({
-              domain: item.name,
-              pagesCount: pages.length,
-              thumbnailUrl: thumbnailUrl,
-              date: pages.length > 0 ? pages[0].title : 'Unknown'
-            });
-          } catch (e) {
-            results.push({ domain: item.name, pagesCount: 0, error: 'No sitemap found' });
           }
         }
+        return {
+          structuredContent: { success: true, results },
+          content: [{ type: "text", text: JSON.stringify({ success: true, results }, null, 2) }]
+        };
+      } catch (error) {
+        return {
+          isError: true,
+          content: [{ type: "text", text: `Failed to list crawled domains: ${error.message}` }]
+        };
       }
-      return {
-        structuredContent: { success: true, results },
-        content: [{ type: "text", text: JSON.stringify({ success: true, results }, null, 2) }]
-      };
-    } catch (error) {
-      return {
-        isError: true,
-        content: [{ type: "text", text: `Failed to list crawled domains: ${error.message}` }]
-      };
     }
-  }
-);
+  );
 
-// Tool 3: get_crawl_details
-mcpServer.registerTool(
-  "get_crawl_details",
-  {
-    description: "Get detailed crawl results for a specific domain, including sitemap.json info, lists of HTML files and screenshots.",
-    inputSchema: z.object({
-      domain: z.string().describe("The hostname/domain name folder to retrieve details for (e.g. 'example.com')"),
-    }),
-    annotations: {
-      readOnlyHint: true
+  // Tool 3: get_crawl_details
+  mcpServer.registerTool(
+    "get_crawl_details",
+    {
+      description: "Get detailed crawl results for a specific domain, including sitemap.json info, lists of HTML files and screenshots.",
+      inputSchema: z.object({
+        domain: z.string().describe("The hostname/domain name folder to retrieve details for (e.g. 'example.com')"),
+      }),
+      annotations: {
+        readOnlyHint: true
+      }
+    },
+    async ({ domain }) => {
+      const sitemapPath = path.join(EXPORTS_DIR, domain, 'sitemap.json');
+      try {
+        const sitemapData = await fs.readFile(sitemapPath, 'utf8');
+        const pages = JSON.parse(sitemapData);
+        return {
+          structuredContent: { success: true, domain, pages },
+          content: [{ type: "text", text: JSON.stringify({ success: true, domain, pages }, null, 2) }]
+        };
+      } catch (error) {
+        return {
+          isError: true,
+          content: [{ type: "text", text: `Domain or sitemap not found for ${domain}: ${error.message}` }]
+        };
+      }
     }
-  },
-  async ({ domain }) => {
-    const sitemapPath = path.join(EXPORTS_DIR, domain, 'sitemap.json');
-    try {
-      const sitemapData = await fs.readFile(sitemapPath, 'utf8');
-      const pages = JSON.parse(sitemapData);
-      return {
-        structuredContent: { success: true, domain, pages },
-        content: [{ type: "text", text: JSON.stringify({ success: true, domain, pages }, null, 2) }]
-      };
-    } catch (error) {
-      return {
-        isError: true,
-        content: [{ type: "text", text: `Domain or sitemap not found for ${domain}: ${error.message}` }]
-      };
-    }
-  }
-);
+  );
+
+  return mcpServer;
+}
 
 // Multi-client session storage for SSE
 const transports = new Map();
@@ -338,7 +342,8 @@ app.get("/sse", async (req, res) => {
     transports.delete(transport.sessionId);
   });
 
-  await mcpServer.connect(transport);
+  const sessionServer = createMcpServer();
+  await sessionServer.connect(transport);
   console.log(`[MCP] SSE connection established for session: ${transport.sessionId}`);
 });
 
@@ -364,7 +369,7 @@ async function getOrCreateTransport(req) {
   const sessionId = req.headers['mcp-session-id'] || req.query['sessionId'];
   
   if (sessionId && mcpSessions.has(sessionId)) {
-    return mcpSessions.get(sessionId);
+    return mcpSessions.get(sessionId).transport;
   }
 
   const transport = new StreamableHTTPServerTransport({
@@ -372,7 +377,7 @@ async function getOrCreateTransport(req) {
     enableJsonResponse: true,
     onsessioninitialized: (id) => {
       console.log(`[MCP] New Streamable HTTP session initialized: ${id}`);
-      mcpSessions.set(id, transport);
+      mcpSessions.set(id, { transport, server });
     }
   });
 
@@ -383,7 +388,8 @@ async function getOrCreateTransport(req) {
     }
   };
 
-  await mcpServer.connect(transport);
+  const server = createMcpServer();
+  await server.connect(transport);
   return transport;
 }
 
