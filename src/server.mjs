@@ -10,6 +10,8 @@ import { ZipArchive } from 'archiver';
 import { runCrawlerForUrl } from './crawl.mjs';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { SSEServerTransport } from '@modelcontextprotocol/sdk/server/sse.js';
+import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
+import crypto from 'crypto';
 import { z } from 'zod';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -217,12 +219,18 @@ mcpServer.registerTool(
     inputSchema: z.object({
       url: z.string().url().describe("The full URL of the website funnel to crawl"),
     }),
+    annotations: {
+      readOnlyHint: false,
+      openWorldHint: true,
+      destructiveHint: false
+    }
   },
   async ({ url }) => {
     try {
       console.log(`[MCP] Starting crawl for: ${url}`);
       const result = await runCrawlerForUrl(url);
       return {
+        structuredContent: { success: true, result },
         content: [{ type: "text", text: JSON.stringify({ success: true, result }, null, 2) }]
       };
     } catch (error) {
@@ -241,6 +249,9 @@ mcpServer.registerTool(
   {
     description: "List all previously crawled domains along with basic statistics (e.g. number of pages).",
     inputSchema: z.object({}),
+    annotations: {
+      readOnlyHint: true
+    }
   },
   async () => {
     try {
@@ -270,6 +281,7 @@ mcpServer.registerTool(
         }
       }
       return {
+        structuredContent: { success: true, results },
         content: [{ type: "text", text: JSON.stringify({ success: true, results }, null, 2) }]
       };
     } catch (error) {
@@ -289,13 +301,18 @@ mcpServer.registerTool(
     inputSchema: z.object({
       domain: z.string().describe("The hostname/domain name folder to retrieve details for (e.g. 'example.com')"),
     }),
+    annotations: {
+      readOnlyHint: true
+    }
   },
   async ({ domain }) => {
     const sitemapPath = path.join(EXPORTS_DIR, domain, 'sitemap.json');
     try {
       const sitemapData = await fs.readFile(sitemapPath, 'utf8');
+      const pages = JSON.parse(sitemapData);
       return {
-        content: [{ type: "text", text: JSON.stringify({ success: true, domain, pages: JSON.parse(sitemapData) }, null, 2) }]
+        structuredContent: { success: true, domain, pages },
+        content: [{ type: "text", text: JSON.stringify({ success: true, domain, pages }, null, 2) }]
       };
     } catch (error) {
       return {
@@ -338,9 +355,29 @@ app.post("/messages", async (req, res) => {
   await transport.handlePostMessage(req, res, req.body);
 });
 
+// ==========================================
+// Streamable HTTP Transport (/mcp) Setup
+// ==========================================
+const streamableTransport = new StreamableHTTPServerTransport({
+  sessionIdGenerator: () => crypto.randomUUID(),
+});
+
+// Connect server to Streamable HTTP transport
+await mcpServer.connect(streamableTransport);
+
+app.post("/mcp", async (req, res) => {
+  console.log(`[Server] POST /mcp req.body:`, JSON.stringify(req.body));
+  await streamableTransport.handleRequest(req, res, req.body);
+});
+
+app.get("/mcp", async (req, res) => {
+  await streamableTransport.handleRequest(req, res, req.body);
+});
+
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 Server running at http://0.0.0.0:${PORT}`);
   console.log(`📄 Swagger UI available at http://0.0.0.0:${PORT}/api/docs`);
   console.log(`🔌 MCP SSE Endpoint active at http://0.0.0.0:${PORT}/sse`);
+  console.log(`🔌 MCP Streamable HTTP Endpoint active at http://0.0.0.0:${PORT}/mcp`);
 });
