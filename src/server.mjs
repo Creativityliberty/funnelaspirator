@@ -360,6 +360,7 @@ app.post("/messages", async (req, res) => {
 // ==========================================
 const streamableTransport = new StreamableHTTPServerTransport({
   sessionIdGenerator: () => crypto.randomUUID(),
+  enableJsonResponse: true,
 });
 
 // Connect server to Streamable HTTP transport
