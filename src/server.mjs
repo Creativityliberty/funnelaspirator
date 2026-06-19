@@ -324,6 +324,43 @@ function createMcpServer() {
     }
   );
 
+  // Tool 4: get_crawled_file
+  mcpServer.registerTool(
+    "get_crawled_file",
+    {
+      description: "Read the text content of a crawled page (such as the HTML code or extracted JSON metadata).",
+      inputSchema: z.object({
+        domain: z.string().describe("The domain name folder where the crawled files are located (e.g. 'joelerway.com')"),
+        filePath: z.string().describe("The relative file path inside the domain folder (e.g. 'pages/index.html' or 'data/index.json')"),
+      }),
+      annotations: {
+        readOnlyHint: true
+      }
+    },
+    async ({ domain, filePath }) => {
+      const domainDir = path.resolve(EXPORTS_DIR, domain);
+      const fullPath = path.resolve(domainDir, filePath);
+      if (!fullPath.startsWith(domainDir)) {
+        return {
+          isError: true,
+          content: [{ type: "text", text: "Access denied: path traversal detected" }]
+        };
+      }
+      try {
+        const content = await fs.readFile(fullPath, 'utf8');
+        return {
+          structuredContent: { success: true, domain, filePath, content },
+          content: [{ type: "text", text: content }]
+        };
+      } catch (error) {
+        return {
+          isError: true,
+          content: [{ type: "text", text: `Failed to read file: ${error.message}` }]
+        };
+      }
+    }
+  );
+
   return mcpServer;
 }
 
