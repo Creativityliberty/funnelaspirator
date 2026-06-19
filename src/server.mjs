@@ -358,21 +358,58 @@ app.post("/messages", async (req, res) => {
 // ==========================================
 // Streamable HTTP Transport (/mcp) Setup
 // ==========================================
-const streamableTransport = new StreamableHTTPServerTransport({
-  sessionIdGenerator: () => crypto.randomUUID(),
-  enableJsonResponse: true,
-});
+const mcpSessions = new Map();
 
-// Connect server to Streamable HTTP transport
-await mcpServer.connect(streamableTransport);
+async function getOrCreateTransport(req) {
+  const sessionId = req.headers['mcp-session-id'] || req.query['sessionId'];
+  
+  if (sessionId && mcpSessions.has(sessionId)) {
+    return mcpSessions.get(sessionId);
+  }
+
+  const transport = new StreamableHTTPServerTransport({
+    sessionIdGenerator: () => crypto.randomUUID(),
+    enableJsonResponse: true,
+    onsessioninitialized: (id) => {
+      console.log(`[MCP] New Streamable HTTP session initialized: ${id}`);
+      mcpSessions.set(id, transport);
+    }
+  });
+
+  transport.onclose = () => {
+    if (transport.sessionId) {
+      console.log(`[MCP] Streamable HTTP session closed: ${transport.sessionId}`);
+      mcpSessions.delete(transport.sessionId);
+    }
+  };
+
+  await mcpServer.connect(transport);
+  return transport;
+}
 
 app.post("/mcp", async (req, res) => {
   console.log(`[Server] POST /mcp req.body:`, JSON.stringify(req.body));
-  await streamableTransport.handleRequest(req, res, req.body);
+  try {
+    const transport = await getOrCreateTransport(req);
+    await transport.handleRequest(req, res, req.body);
+  } catch (error) {
+    console.error('[Server] POST /mcp failed:', error);
+    if (!res.headersSent) {
+      res.status(500).json({ error: error.message });
+    }
+  }
 });
 
 app.get("/mcp", async (req, res) => {
-  await streamableTransport.handleRequest(req, res, req.body);
+  try {
+    const transport = await getOrCreateTransport(req);
+    await transport.handleRequest(req, res, req.body);
+  } catch (error) {
+    console.error('[Server] GET /mcp failed:', error);
+    if (!res.headersSent) {
+      res.status(500).json({ error: error.message });
+    }
+  }
 });
 
 const PORT = process.env.PORT || 3000;
