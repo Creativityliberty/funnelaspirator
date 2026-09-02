@@ -455,9 +455,9 @@ async function extractInDepthMetadata(page, siteDir, slug) {
       }
     }
 
-    // Detect Motion & UI Frameworks on window
+    // Detect Motion, WebGL & UI Frameworks on window & DOM
     const detectedLibraries = [];
-    if (window.gsap) detectedLibraries.push({ name: 'GSAP', version: window.gsap.version || 'unknown' });
+    if (window.gsap) detectedLibraries.push({ name: 'GSAP', version: window.gsap.version || 'unknown', type: 'timeline-motion' });
     if (window.ScrollTrigger) detectedLibraries.push({ name: 'ScrollTrigger', type: 'scroll-motion' });
     if (window.FramerMotion || document.querySelector('[data-framer-name], [data-projection-id]')) detectedLibraries.push({ name: 'Framer Motion', type: 'react-motion' });
     if (window.AOS || document.querySelector('[data-aos]')) detectedLibraries.push({ name: 'AOS (Animate On Scroll)', type: 'scroll-motion' });
@@ -465,7 +465,18 @@ async function extractInDepthMetadata(page, siteDir, slug) {
     if (window.THREE) detectedLibraries.push({ name: 'Three.js', type: '3d-webgl' });
     if (window.Spline || document.querySelector('spline-viewer')) detectedLibraries.push({ name: 'Spline', type: '3d-interactive' });
     if (window.Lenis) detectedLibraries.push({ name: 'Lenis', type: 'smooth-scroll' });
+    if (window.LocomotiveScroll || document.querySelector('[data-scroll-container]')) detectedLibraries.push({ name: 'Locomotive Scroll', type: 'smooth-scroll' });
+    if (window.anime) detectedLibraries.push({ name: 'Anime.js', type: 'canvas-svg-motion' });
+    if (window.Motion || window.motion) detectedLibraries.push({ name: 'Motion One (Framer Engine)', type: 'high-perf-motion' });
+    if (window.popmotion) detectedLibraries.push({ name: 'Popmotion', type: 'physics-spring-motion' });
+    if (window.KUTE) detectedLibraries.push({ name: 'Kute.js', type: 'svg-morphing' });
+    if (window.PIXI) detectedLibraries.push({ name: 'PixiJS', type: '2d-webgl-canvas' });
+    if (window.rive || document.querySelector('canvas[data-rive]')) detectedLibraries.push({ name: 'Rive', type: 'interactive-vector' });
+    if (window.barba || document.querySelector('[data-barba]')) detectedLibraries.push({ name: 'Barba.js', type: 'page-transitions' });
     if (window.Swiper || document.querySelector('.swiper, .swiper-container')) detectedLibraries.push({ name: 'Swiper.js', type: 'carousel-slider' });
+    if (window.Splide || document.querySelector('.splide')) detectedLibraries.push({ name: 'Splide.js', type: 'carousel-slider' });
+    if (window.EmblaCarousel || document.querySelector('.embla')) detectedLibraries.push({ name: 'Embla Carousel', type: 'touch-slider' });
+    if (window.jQuery && (window.jQuery.fn.slick || document.querySelector('.slick-slider'))) detectedLibraries.push({ name: 'Slick Slider', type: 'carousel-slider' });
     if (window.Alpine) detectedLibraries.push({ name: 'Alpine.js', type: 'micro-reactivity' });
     if (document.querySelector('[class*="tw-"], [class*="flex"], [class*="grid"]')) detectedLibraries.push({ name: 'Tailwind CSS', type: 'css-framework' });
 
