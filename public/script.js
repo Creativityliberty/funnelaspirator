@@ -146,6 +146,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 body: JSON.stringify({ rawData: text })
             });
 
+            const contentType = res.headers.get('content-type') || '';
+            if (!contentType.includes('application/json')) {
+                const textResp = await res.text();
+                throw new Error(`Le serveur a renvoyé du HTML au lieu de JSON (Code: ${res.status}). Assurez-vous d'être bien sur http://localhost:3055 et non sur le port 3000.`);
+            }
+
             const data = await res.json();
             if (data.success) {
                 currentGeneratedMarkdown = data.markdown;
