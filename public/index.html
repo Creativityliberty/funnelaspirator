@@ -37,6 +37,13 @@
                     </svg>
                     <span>Brand-Led Editorial Studio</span>
                 </button>
+                <button id="mode-extractor-btn" class="mode-pill" title="Convertisseur JSON vers Markdown Spécifications">
+                    <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none">
+                        <polyline points="4 17 10 11 4 5"></polyline>
+                        <line x1="12" y1="19" x2="20" y2="19"></line>
+                    </svg>
+                    <span>Motion & Spec Lab</span>
+                </button>
             </div>
             <div class="nav-meta">
                 <button id="theme-toggle-btn" class="theme-toggle-pill" title="Basculer Thème Clair / Sombre">
@@ -160,6 +167,46 @@
                 <div id="editorial-preview-wrapper" class="preview-wrapper desktop-mode">
                     <!-- Live Brand-Led Editorial Funnel Injected Here -->
                     <div id="live-editorial-funnel" class="editorial-funnel-document"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- MODE 3: MOTION & SPEC LAB (Convertisseur JSON vers Markdown) -->
+        <div id="view-extractor" class="studio-view hidden">
+            <header class="editorial-header">
+                <div class="editorial-kicker">CONVERTISSEUR INSTANTANÉ & EXPORT DE SPÉCIFICATIONS</div>
+                <h1 class="editorial-headline">Motion & Tokens <span class="highlight-gold">Lab & Exporter</span>.</h1>
+                <p class="editorial-lead">
+                    Collez n'importe quel extrait JSON aspiré pour isoler instantanément la physique du motion (@keyframes, transitions, cubic-bezier), le comportement des boutons au survol (:hover deltas) et générer un rapport Markdown (.md) prêt à l'emploi.
+                </p>
+            </header>
+
+            <div class="lab-container glass-panel">
+                <div class="lab-input-col">
+                    <div class="lab-header-bar">
+                        <h3>📥 Coller le JSON Brut</h3>
+                        <button id="paste-sample-json-btn" class="glass-btn">Charger l'Exemple</button>
+                    </div>
+                    <textarea id="raw-json-input" placeholder='Collez ici votre JSON contenant designTokens, motion, microInteractions, etc...' rows="16"></textarea>
+                    <div class="lab-actions">
+                        <button id="convert-json-btn" class="primary-btn glow-btn">
+                            <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
+                            Convertir en Spécifications Markdown & Fichier .md
+                        </button>
+                    </div>
+                </div>
+
+                <div class="lab-output-col">
+                    <div class="lab-header-bar">
+                        <h3>📄 Rendu Spécifications Markdown (.md)</h3>
+                        <div class="output-actions">
+                            <button id="copy-md-btn" class="glass-btn">Copier le Markdown</button>
+                            <a id="download-md-file" href="#" download="funnel-specs.md" class="glass-btn hidden">Télécharger .md</a>
+                        </div>
+                    </div>
+                    <div id="md-output-container" class="md-output-box">
+                        <p class="placeholder-text">Le rapport Markdown généré apparaîtra ici avec toutes les clés de motion, rituels et deltas :hover isolés...</p>
+                    </div>
                 </div>
             </div>
         </div>

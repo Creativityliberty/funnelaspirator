@@ -2,8 +2,10 @@ document.addEventListener('DOMContentLoaded', () => {
     // Mode Switcher Elements
     const modeCrawlerBtn = document.getElementById('mode-crawler-btn');
     const modeStudioBtn = document.getElementById('mode-studio-btn');
+    const modeExtractorBtn = document.getElementById('mode-extractor-btn');
     const viewCrawler = document.getElementById('view-crawler');
     const viewStudio = document.getElementById('view-studio');
+    const viewExtractor = document.getElementById('view-extractor');
 
     // Crawler Elements
     const form = document.getElementById('crawl-form');
@@ -53,19 +55,163 @@ document.addEventListener('DOMContentLoaded', () => {
     const copyFunnelHtmlBtn = document.getElementById('copy-funnel-html-btn');
 
     // Mode Switch Logic
-    modeCrawlerBtn.addEventListener('click', () => {
-        modeCrawlerBtn.classList.add('active');
-        modeStudioBtn.classList.remove('active');
-        viewCrawler.classList.remove('hidden');
-        viewStudio.classList.add('hidden');
+    function switchMode(target) {
+        modeCrawlerBtn?.classList.toggle('active', target === 'crawler');
+        modeStudioBtn?.classList.toggle('active', target === 'studio');
+        modeExtractorBtn?.classList.toggle('active', target === 'extractor');
+
+        viewCrawler?.classList.toggle('hidden', target !== 'crawler');
+        viewStudio?.classList.toggle('hidden', target !== 'studio');
+        viewExtractor?.classList.toggle('hidden', target !== 'extractor');
+
+        if (target === 'studio') {
+            renderEditorialFunnelDemo();
+        }
+    }
+
+    modeCrawlerBtn?.addEventListener('click', () => switchMode('crawler'));
+    modeStudioBtn?.addEventListener('click', () => switchMode('studio'));
+    modeExtractorBtn?.addEventListener('click', () => switchMode('extractor'));
+
+    // Motion & Spec Lab Elements
+    const rawJsonInput = document.getElementById('raw-json-input');
+    const convertJsonBtn = document.getElementById('convert-json-btn');
+    const pasteSampleJsonBtn = document.getElementById('paste-sample-json-btn');
+    const mdOutputContainer = document.getElementById('md-output-container');
+    const copyMdBtn = document.getElementById('copy-md-btn');
+    const downloadMdFile = document.getElementById('download-md-file');
+
+    let currentGeneratedMarkdown = '';
+
+    pasteSampleJsonBtn?.addEventListener('click', () => {
+        const sampleJson = {
+            url: "https://www.brandappart.com/",
+            title: "Brand Appart – Design studio for funded startups",
+            designTokens: {
+                cssVariables: {
+                    "--ba-ink": "#171412",
+                    "--ba-accent": "#fe8923",
+                    "--ba-radius-pill": "999px",
+                    "--ba-duration-base": ".24s",
+                    "--ba-ease-out": "cubic-bezier(.22, 1, .36, 1)"
+                },
+                colors: {
+                    text: ["#FBFBFB", "#171412", "#FF7722"],
+                    background: ["#171412", "#FFFFFF", "#3D2FA9"]
+                },
+                typography: {
+                    families: ["Youth", "PP Neue Montreal", "IBM Plex Mono"],
+                    weights: ["400", "700", "900"]
+                }
+            },
+            motion: {
+                detectedLibraries: [{ name: "Tailwind CSS", type: "css-framework" }],
+                keyframes: [
+                    { name: "nav_card_in", steps: [{ keyText: "0%", cssText: "opacity: 0; transform: translateY(12px);" }] },
+                    { name: "spin", steps: [{ keyText: "100%", cssText: "transform: rotate(360deg);" }] }
+                ],
+                activeTransitions: [
+                    { selector: ".nav", property: "transform", duration: "0.42s", timing: "cubic-bezier(0.36, 0.33, 0, 1)" },
+                    { selector: ".link-icon", property: "transform", duration: "0.64s", timing: "cubic-bezier(0.36, 0.33, 0, 1)" }
+                ]
+            },
+            microInteractions: {
+                ctas: [
+                    {
+                        text: "BOOK A CALL NOW",
+                        classes: "btn w-inline-block",
+                        defaultState: { backgroundColor: "#FFFFFF", color: "#171412", borderRadius: "9.6px", transition: "all 0.3s" },
+                        hoverState: { backgroundColor: "#171412", color: "#FBF9EF", transform: "scale(1.02)" }
+                    }
+                ]
+            }
+        };
+        rawJsonInput.value = JSON.stringify(sampleJson, null, 2);
     });
 
-    modeStudioBtn.addEventListener('click', () => {
-        modeStudioBtn.classList.add('active');
-        modeCrawlerBtn.classList.remove('active');
-        viewStudio.classList.remove('hidden');
-        viewCrawler.classList.add('hidden');
-        renderEditorialFunnelDemo();
+    convertJsonBtn?.addEventListener('click', async () => {
+        const text = rawJsonInput.value.trim();
+        if (!text) {
+            alert('Veuillez coller un JSON valide dans la zone de texte.');
+            return;
+        }
+
+        convertJsonBtn.disabled = true;
+        convertJsonBtn.innerHTML = 'Analyse & Extraction en cours...';
+
+        try {
+            const res = await fetch('/api/parse-tokens', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ rawData: text })
+            });
+
+            const data = await res.json();
+            if (data.success) {
+                currentGeneratedMarkdown = data.markdown;
+                
+                // Render formatted preview
+                let previewHtml = `<div class="md-preview-wrapper">`;
+                previewHtml += `<div class="meta-badges-row" style="margin-bottom:1rem;">
+                    <span class="badge-pill badge-gold">✅ Spécifications Extraites</span>
+                    <span class="badge-pill">Fichier généré : ${data.filename}</span>
+                </div>`;
+                
+                // Formatted display
+                const lines = data.markdown.split('\n');
+                let inCode = false;
+                lines.forEach(line => {
+                    if (line.startsWith('```')) {
+                        inCode = !inCode;
+                        previewHtml += inCode ? '<pre><code>' : '</code></pre>';
+                    } else if (inCode) {
+                        previewHtml += line.replace(/</g, '&lt;').replace(/>/g, '&gt;') + '\n';
+                    } else if (line.startsWith('# ')) {
+                        previewHtml += `<h1>${line.replace('# ', '')}</h1>`;
+                    } else if (line.startsWith('## ')) {
+                        previewHtml += `<h2>${line.replace('## ', '')}</h2>`;
+                    } else if (line.startsWith('### ')) {
+                        previewHtml += `<h3>${line.replace('### ', '')}</h3>`;
+                    } else if (line.startsWith('> ')) {
+                        previewHtml += `<blockquote style="color:var(--text-secondary); border-left:3px solid var(--gold-primary); padding-left:0.8rem; margin:0.5rem 0;">${line.replace('> ', '')}</blockquote>`;
+                    } else if (line.startsWith('- ')) {
+                        previewHtml += `<div>• ${line.replace('- ', '')}</div>`;
+                    } else if (line.trim()) {
+                        previewHtml += `<p>${line}</p>`;
+                    }
+                });
+                previewHtml += `</div>`;
+                mdOutputContainer.innerHTML = previewHtml;
+
+                if (downloadMdFile) {
+                    downloadMdFile.classList.remove('hidden');
+                    downloadMdFile.href = data.filePath;
+                    downloadMdFile.setAttribute('download', data.filename);
+                }
+            } else {
+                throw new Error(data.error);
+            }
+        } catch (err) {
+            alert('Erreur: ' + err.message);
+        } finally {
+            convertJsonBtn.disabled = false;
+            convertJsonBtn.innerHTML = `
+                <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
+                Convertir en Spécifications Markdown & Fichier .md
+            `;
+        }
+    });
+
+    copyMdBtn?.addEventListener('click', () => {
+        if (!currentGeneratedMarkdown) {
+            alert('Aucun Markdown à copier. Lancez une conversion d\'abord.');
+            return;
+        }
+        navigator.clipboard.writeText(currentGeneratedMarkdown).then(() => {
+            const prev = copyMdBtn.textContent;
+            copyMdBtn.textContent = '✅ Markdown Copié !';
+            setTimeout(() => { copyMdBtn.textContent = prev; }, 2000);
+        });
     });
 
     // Viewport Switcher

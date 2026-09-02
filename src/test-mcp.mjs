@@ -93,8 +93,8 @@ try {
   }
 
   const tools = toolsResponse.body.result.tools;
-  if (!tools || tools.length !== 8) {
-    throw new Error(`Expected 8 tools, got ${tools ? tools.length : 0}`);
+  if (!tools || tools.length !== 9) {
+    throw new Error(`Expected 9 tools, got ${tools ? tools.length : 0}`);
   }
 
   const crawlFunnel = tools.find(t => t.name === 'crawl_funnel');
@@ -105,9 +105,10 @@ try {
   const getMotionSpecs = tools.find(t => t.name === 'get_funnel_motion_specs');
   const getComponents = tools.find(t => t.name === 'get_funnel_components');
   const getMicroInteractions = tools.find(t => t.name === 'get_funnel_micro_interactions');
+  const parseJsonToSpecs = tools.find(t => t.name === 'parse_json_to_specs_md');
 
-  if (!crawlFunnel || !listCrawled || !getCrawl || !getCrawledFile || !getDesignSystem || !getMotionSpecs || !getComponents || !getMicroInteractions) {
-    throw new Error('Could not find all 8 expected tools by name.');
+  if (!crawlFunnel || !listCrawled || !getCrawl || !getCrawledFile || !getDesignSystem || !getMotionSpecs || !getComponents || !getMicroInteractions || !parseJsonToSpecs) {
+    throw new Error('Could not find all 9 expected tools by name.');
   }
 
   // Assert annotations

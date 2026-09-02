@@ -343,6 +343,143 @@ app.get('/api/download/:domain', async (req, res) => {
   archive.finalize();
 });
 
+/**
+ * @swagger
+ * /api/parse-tokens:
+ *   post:
+ *     summary: Parse raw crawled JSON and generate a clean Design System & Motion Markdown report
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               rawData:
+ *                 type: string
+ *                 description: Raw JSON string or object
+ *     responses:
+ *       200:
+ *         description: Markdown report generated
+ */
+app.post('/api/parse-tokens', async (req, res) => {
+  try {
+    let parsed;
+    if (typeof req.body === 'string') {
+      parsed = JSON.parse(req.body);
+    } else if (req.body.rawData) {
+      parsed = typeof req.body.rawData === 'string' ? JSON.parse(req.body.rawData) : req.body.rawData;
+    } else {
+      parsed = req.body;
+    }
+
+    const url = parsed.url || 'Unknown URL';
+    let domain = 'custom-extract';
+    try {
+      domain = new URL(url).hostname;
+    } catch (e) {}
+
+    const dt = parsed.designTokens || {};
+    const motion = parsed.motion || {};
+    const micro = parsed.microInteractions || {};
+    const components = parsed.components || [];
+
+    // Generate Markdown
+    let md = `# Deep Design System & Motion Specification — ${domain}\n\n`;
+    md += `> **Source URL** : ${url}\n`;
+    md += `> **Date d'extraction** : ${new Date().toISOString()}\n\n`;
+
+    // 1. Motion & Frameworks
+    md += `## 1. Motion & Micro-Interactions Architecture\n\n`;
+    const libs = (motion.detectedLibraries || []).map(l => `\`${l.name} (${l.type || 'framework'})\``).join(', ') || 'Vanilla CSS Engine';
+    md += `- **Librairies Détectées** : ${libs}\n\n`;
+
+    if (motion.keyframes && motion.keyframes.length > 0) {
+      md += `### Rituels @keyframes Extraits\n\`\`\`css\n`;
+      motion.keyframes.forEach(kf => {
+        md += `@keyframes ${kf.name} {\n`;
+        (kf.steps || []).forEach(step => {
+          md += `  ${step.keyText} { ${step.cssText} }\n`;
+        });
+        md += `}\n\n`;
+      });
+      md += `\`\`\`\n\n`;
+    }
+
+    if (motion.activeTransitions && motion.activeTransitions.length > 0) {
+      md += `### Signatures de Transitions Actives\n| Sélecteur | Propriété | Durée | Timing Function |\n|---|---|---|---|\n`;
+      motion.activeTransitions.forEach(t => {
+        md += `| \`${t.selector}\` | \`${t.property}\` | \`${t.duration}\` | \`${t.timing}\` |\n`;
+      });
+      md += `\n`;
+    }
+
+    // 2. CTAs Micro-Interactions
+    if (micro.ctas && micro.ctas.length > 0) {
+      md += `## 2. Comportement des Boutons & CTAs (:hover deltas)\n\n`;
+      micro.ctas.forEach(cta => {
+        md += `### Bouton : "${cta.text?.trim()}"\n`;
+        md += `- **Sélecteur/Classes** : \`${cta.classes || cta.tag}\`\n`;
+        md += `- **État Normal** : Background: \`${cta.defaultState?.backgroundColor}\` | Color: \`${cta.defaultState?.color}\` | Radius: \`${cta.defaultState?.borderRadius}\` | Transition: \`${cta.defaultState?.transition || 'none'}\`\n`;
+        if (cta.hoverState) {
+          md += `- **Comportement Hover** : Background: \`${cta.hoverState.backgroundColor || 'identique'}\` | Color: \`${cta.hoverState.color || 'identique'}\` | Transform: \`${cta.hoverState.transform || 'none'}\`\n`;
+        }
+        md += `\n`;
+      });
+    }
+
+    // 3. Design Tokens & CSS Variables
+    md += `## 3. Design Tokens & Variables :root\n\n`;
+    if (dt.cssVariables && Object.keys(dt.cssVariables).length > 0) {
+      md += `\`\`\`css\n:root {\n`;
+      for (const [k, v] of Object.entries(dt.cssVariables)) {
+        md += `  ${k}: ${v};\n`;
+      }
+      md += `}\n\`\`\`\n\n`;
+    }
+
+    // 4. Palette de Couleurs
+    if (dt.colors) {
+      md += `### Palette Extraite\n`;
+      if (dt.colors.text?.length) md += `- **Textes** : ${dt.colors.text.map(c => `\`${c}\``).join(', ')}\n`;
+      if (dt.colors.background?.length) md += `- **Fonds** : ${dt.colors.background.map(c => `\`${c}\``).join(', ')}\n`;
+      if (dt.colors.border?.length) md += `- **Bordures** : ${dt.colors.border.map(c => `\`${c}\``).join(', ')}\n`;
+      md += `\n`;
+    }
+
+    // 5. Typographie
+    if (dt.typography) {
+      md += `### Hiérarchie Typographique\n`;
+      md += `- **Familles de fontes** : ${(dt.typography.families || []).map(f => `\`${f}\``).join(', ')}\n`;
+      md += `- **Graisses (Weights)** : ${(dt.typography.weights || []).join(', ')}\n\n`;
+    }
+
+    // 6. Sauvegarde du fichier Markdown sur le disque
+    const timestamp = Date.now();
+    const filename = `${domain}-specs-${timestamp}.md`;
+    const targetDir = path.join(EXPORTS_DIR, 'manual-extracts');
+    await fs.mkdir(targetDir, { recursive: true });
+    await fs.writeFile(path.join(targetDir, filename), md, 'utf8');
+
+    res.json({
+      success: true,
+      domain,
+      filename,
+      filePath: `/exports/manual-extracts/${filename}`,
+      markdown: md,
+      tokens: {
+        designTokens: dt,
+        motion,
+        microInteractions: micro,
+        componentsCount: components.length
+      }
+    });
+  } catch (error) {
+    console.error('Error parsing tokens:', error);
+    res.status(400).json({ success: false, error: 'JSON invalide ou erreur de parsing: ' + error.message });
+  }
+});
+
 // ==========================================
 // Native Model Context Protocol (MCP) Setup
 // ==========================================
@@ -634,6 +771,92 @@ function createMcpServer() {
         return {
           isError: true,
           content: [{ type: "text", text: `Failed to get micro-interactions for ${domain}: ${error.message}` }]
+        };
+      }
+    }
+  );
+
+  // Tool 9: parse_json_to_specs_md
+  mcpServer.registerTool(
+    "parse_json_to_specs_md",
+    {
+      description: "Convert a raw crawled page JSON (with designTokens, motion, microInteractions) into a clean, highly-readable Markdown specification file (.md) and saves it in exports/manual-extracts/.",
+      inputSchema: z.object({
+        jsonData: z.string().describe("The raw JSON string containing designTokens, motion, microInteractions, etc."),
+      }),
+      annotations: {
+        readOnlyHint: false,
+        openWorldHint: false,
+        destructiveHint: false
+      }
+    },
+    async ({ jsonData }) => {
+      try {
+        const parsed = JSON.parse(jsonData);
+        const url = parsed.url || 'Unknown URL';
+        let domain = 'custom-extract';
+        try { domain = new URL(url).hostname; } catch (e) {}
+
+        const dt = parsed.designTokens || {};
+        const motion = parsed.motion || {};
+        const micro = parsed.microInteractions || {};
+
+        let md = `# Deep Design System & Motion Specification — ${domain}\n\n`;
+        md += `> **Source URL** : ${url}\n`;
+        md += `> **Date d'extraction** : ${new Date().toISOString()}\n\n`;
+
+        md += `## 1. Motion Architecture\n`;
+        const libs = (motion.detectedLibraries || []).map(l => `\`${l.name}\``).join(', ') || 'Vanilla CSS';
+        md += `- **Librairies** : ${libs}\n\n`;
+
+        if (motion.keyframes?.length) {
+          md += `### Keyframes Extraits\n\`\`\`css\n`;
+          motion.keyframes.forEach(kf => {
+            md += `@keyframes ${kf.name} {\n`;
+            (kf.steps || []).forEach(s => { md += `  ${s.keyText} { ${s.cssText} }\n`; });
+            md += `}\n\n`;
+          });
+          md += `\`\`\`\n\n`;
+        }
+
+        if (motion.activeTransitions?.length) {
+          md += `### Transitions Actives\n| Sélecteur | Propriété | Durée | Timing |\n|---|---|---|---|\n`;
+          motion.activeTransitions.forEach(t => {
+            md += `| \`${t.selector}\` | \`${t.property}\` | \`${t.duration}\` | \`${t.timing}\` |\n`;
+          });
+          md += `\n`;
+        }
+
+        if (micro.ctas?.length) {
+          md += `## 2. Micro-Interactions Boutons & CTAs\n\n`;
+          micro.ctas.forEach(c => {
+            md += `- **${c.text?.trim() || 'CTA'}** : Normal \`${c.defaultState?.backgroundColor || 'transparent'}\` ➔ Hover \`${c.hoverState?.backgroundColor || 'same'}\` | Transform: \`${c.hoverState?.transform || 'none'}\`\n`;
+          });
+          md += `\n`;
+        }
+
+        if (dt.cssVariables && Object.keys(dt.cssVariables).length) {
+          md += `## 3. Design Tokens (:root)\n\`\`\`css\n:root {\n`;
+          for (const [k, v] of Object.entries(dt.cssVariables)) {
+            md += `  ${k}: ${v};\n`;
+          }
+          md += `}\n\`\`\`\n\n`;
+        }
+
+        const timestamp = Date.now();
+        const filename = `${domain}-specs-${timestamp}.md`;
+        const targetDir = path.join(EXPORTS_DIR, 'manual-extracts');
+        await fs.mkdir(targetDir, { recursive: true });
+        await fs.writeFile(path.join(targetDir, filename), md, 'utf8');
+
+        return {
+          structuredContent: { success: true, filename, filePath: `exports/manual-extracts/${filename}`, markdown: md },
+          content: [{ type: "text", text: md }]
+        };
+      } catch (err) {
+        return {
+          isError: true,
+          content: [{ type: "text", text: `Erreur lors de la génération du Markdown: ${err.message}` }]
         };
       }
     }
