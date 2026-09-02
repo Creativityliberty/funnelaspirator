@@ -16,6 +16,36 @@ document.addEventListener('DOMContentLoaded', () => {
     const resultsLoader = document.getElementById('results-loader');
     const refreshBtn = document.getElementById('refresh-btn');
 
+    // Theme Toggle Elements
+    const themeToggleBtn = document.getElementById('theme-toggle-btn');
+    const themeLabel = document.getElementById('theme-label');
+    const sunIcon = themeToggleBtn?.querySelector('.sun-icon');
+    const moonIcon = themeToggleBtn?.querySelector('.moon-icon');
+
+    // Check saved theme
+    const savedTheme = localStorage.getItem('fa_theme') || 'dark';
+    if (savedTheme === 'light') {
+        document.body.classList.add('light-theme');
+        if (themeLabel) themeLabel.textContent = 'Sombre';
+        sunIcon?.classList.add('hidden');
+        moonIcon?.classList.remove('hidden');
+    }
+
+    themeToggleBtn?.addEventListener('click', () => {
+        const isLight = document.body.classList.toggle('light-theme');
+        if (isLight) {
+            localStorage.setItem('fa_theme', 'light');
+            if (themeLabel) themeLabel.textContent = 'Sombre';
+            sunIcon?.classList.add('hidden');
+            moonIcon?.classList.remove('hidden');
+        } else {
+            localStorage.setItem('fa_theme', 'dark');
+            if (themeLabel) themeLabel.textContent = 'Clair';
+            sunIcon?.classList.remove('hidden');
+            moonIcon?.classList.add('hidden');
+        }
+    });
+
     // Studio View Elements
     const viewportBtns = document.querySelectorAll('.viewport-btn');
     const previewWrapper = document.getElementById('editorial-preview-wrapper');

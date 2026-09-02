@@ -17,34 +17,52 @@
         <div class="ambient-glow glow-3"></div>
     </div>
 
-    <!-- Editorial Top Navigation -->
-    <nav class="studio-nav">
-        <div class="nav-brand">
-            <span class="brand-monogram">FA</span>
-            <div class="brand-titles">
-                <span class="brand-name">FUNNEL ASPIRATOR</span>
-                <span class="brand-tagline">EDITORIAL STUDIO PRO</span>
+    <!-- Editorial Floating Top Navigation (Rounded & Centered) -->
+    <header class="studio-nav-wrapper">
+        <nav class="studio-nav">
+            <div class="nav-brand">
+                <div class="brand-titles">
+                    <span class="brand-name">FUNNEL ASPIRATOR</span>
+                    <span class="brand-tagline">EDITORIAL STUDIO PRO</span>
+                </div>
             </div>
-        </div>
-        <div class="nav-modes">
-            <button id="mode-crawler-btn" class="mode-pill active">
-                <span class="pill-dot"></span>
-                <span>Evidence & Crawl Vault</span>
-            </button>
-            <button id="mode-studio-btn" class="mode-pill">
-                <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none">
-                    <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
-                </svg>
-                <span>Brand-Led Editorial Studio</span>
-            </button>
-        </div>
-        <div class="nav-meta">
-            <a href="/api/docs" target="_blank" class="glass-pill-link">
-                <span class="dot-live"></span>
-                API Docs & MCP Native
-            </a>
-        </div>
-    </nav>
+            <div class="nav-modes">
+                <button id="mode-crawler-btn" class="mode-pill active" title="Mode Crawl & Preuves">
+                    <span class="pill-dot"></span>
+                    <span>Evidence & Crawl Vault</span>
+                </button>
+                <button id="mode-studio-btn" class="mode-pill" title="Mode Studio Éditorial">
+                    <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none">
+                        <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+                    </svg>
+                    <span>Brand-Led Editorial Studio</span>
+                </button>
+            </div>
+            <div class="nav-meta">
+                <button id="theme-toggle-btn" class="theme-toggle-pill" title="Basculer Thème Clair / Sombre">
+                    <svg class="sun-icon" viewBox="0 0 24 24" width="15" height="15" stroke="currentColor" stroke-width="2" fill="none">
+                        <circle cx="12" cy="12" r="5"></circle>
+                        <line x1="12" y1="1" x2="12" y2="3"></line>
+                        <line x1="12" y1="21" x2="12" y2="23"></line>
+                        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                        <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                        <line x1="1" y1="12" x2="3" y2="12"></line>
+                        <line x1="21" y1="12" x2="23" y2="12"></line>
+                        <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                        <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+                    </svg>
+                    <svg class="moon-icon hidden" viewBox="0 0 24 24" width="15" height="15" stroke="currentColor" stroke-width="2" fill="none">
+                        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                    </svg>
+                    <span id="theme-label">Clair</span>
+                </button>
+                <a href="/api/docs" target="_blank" class="glass-pill-link">
+                    <span class="dot-live"></span>
+                    API Docs
+                </a>
+            </div>
+        </nav>
+    </header>
 
     <main class="container">
         <!-- MODE 1: CRAWLER & EVIDENCE VAULT -->
@@ -148,7 +166,7 @@
 
         <footer class="editorial-site-footer">
             <div class="footer-meta">
-                <span>Funnel Aspirator Studio Pro — Architecture MCP & Moteur Éditorial</span>
+                <span>Funnel Aspirator Studio Pro de Nümtema AI LABS — Architecture MCP & Moteur Éditorial</span>
                 <a href="/api/docs" target="_blank" class="footer-link">Documentation Swagger</a>
             </div>
         </footer>
