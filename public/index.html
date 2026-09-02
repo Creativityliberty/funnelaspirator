@@ -1,90 +1,237 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="fr">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Funnel Scraper Pro</title>
-    <meta name="description" content="Local web crawler for auditing and exporting funnels in rendered HTML, screenshots, and JSON.">
+    <title>Funnel Aspirator Studio — Brand-Led Editorial Engine</title>
+    <meta name="description" content="Plateforme d'ingénierie inversée et de génération de funnels éditoriaux premium à haute conversion.">
     <link rel="stylesheet" href="style.css">
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=JetBrains+Mono:wght@400;500;600&family=Outfit:wght@300;400;500;600;700;800&family=Playfair+Display:ital,wght@0,600;0,800;1,400&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Syne:wght@500;700;800&display=swap" rel="stylesheet">
 </head>
 <body>
-    <div class="background-orbs">
-        <div class="orb orb-1"></div>
-        <div class="orb orb-2"></div>
-        <div class="orb orb-3"></div>
+    <div class="background-ambient">
+        <div class="ambient-glow glow-1"></div>
+        <div class="ambient-glow glow-2"></div>
+        <div class="ambient-glow glow-3"></div>
     </div>
 
-    <main class="container">
-        <header>
-            <h1>Funnel Scraper <span class="highlight">Pro</span></h1>
-            <p>Audit and extract any marketing funnel with precision.</p>
-        </header>
-
-        <section class="glass-panel crawler-card">
-            <h2>Launch New Crawl</h2>
-            <form id="crawl-form">
-                <div class="input-group">
-                    <input type="url" id="url-input" placeholder="https://example.com" required>
-                    <button type="submit" id="crawl-btn">
-                        <span class="btn-text">Start Crawl</span>
-                        <div class="loader-spinner hidden" id="crawl-loader"></div>
-                    </button>
-                </div>
-            </form>
-            <div id="status-message" class="hidden"></div>
-        </section>
-
-        <section class="results-section">
-            <div class="section-header">
-                <h2>Recent Exports</h2>
-                <button id="refresh-btn" class="icon-btn" title="Refresh">
-                    <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
-                        <polyline points="23 4 23 10 17 10"></polyline>
-                        <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
-                    </svg>
-                </button>
+    <!-- Editorial Top Navigation -->
+    <nav class="studio-nav">
+        <div class="nav-brand">
+            <span class="brand-monogram">FA</span>
+            <div class="brand-titles">
+                <span class="brand-name">FUNNEL ASPIRATOR</span>
+                <span class="brand-tagline">EDITORIAL STUDIO PRO</span>
             </div>
-            
-            <div id="results-grid" class="grid">
-                <!-- Results injected here by JS -->
-            </div>
-            <div id="results-loader" class="loader-spinner hidden"></div>
-        </section>
-        
-        <div class="links-footer">
-            <a href="/api/docs" target="_blank" class="glass-btn">
-                <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none">
-                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                    <polyline points="14 2 14 8 20 8"></polyline>
-                    <line x1="16" y1="13" x2="8" y2="13"></line>
-                    <line x1="16" y1="17" x2="8" y2="17"></line>
-                    <polyline points="10 9 9 9 8 9"></polyline>
+        </div>
+        <div class="nav-modes">
+            <button id="mode-crawler-btn" class="mode-pill active">
+                <span class="pill-dot"></span>
+                <span>Evidence & Crawl Vault</span>
+            </button>
+            <button id="mode-studio-btn" class="mode-pill">
+                <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none">
+                    <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
                 </svg>
-                Swagger API Docs
+                <span>Brand-Led Editorial Studio</span>
+            </button>
+        </div>
+        <div class="nav-meta">
+            <a href="/api/docs" target="_blank" class="glass-pill-link">
+                <span class="dot-live"></span>
+                API Docs & MCP Native
             </a>
         </div>
+    </nav>
+
+    <main class="container">
+        <!-- MODE 1: CRAWLER & EVIDENCE VAULT -->
+        <div id="view-crawler" class="studio-view active">
+            <header class="editorial-header">
+                <div class="editorial-kicker">INGÉNIERIE DE CONVERSION & DEEP REVERSE</div>
+                <h1 class="editorial-headline">Aspirer la <span class="highlight-gold">Mécanique Profonde</span> de Tout Funnel.</h1>
+                <p class="editorial-lead">
+                    Capturez les preuves architecturales, les tokens CSS réels, les signatures de motion et les micro-comportements interactifs pour alimenter vos funnels de vente éditoriaux.
+                </p>
+            </header>
+
+            <!-- Crawl Trigger Card -->
+            <section class="glass-panel crawler-card">
+                <div class="panel-tag">INGESTION D'EVIDENCE URL</div>
+                <form id="crawl-form">
+                    <div class="input-group">
+                        <div class="input-wrapper">
+                            <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none">
+                                <circle cx="12" cy="12" r="10"></circle>
+                                <line x1="2" y1="12" x2="22" y2="12"></line>
+                                <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
+                            </svg>
+                            <input type="url" id="url-input" placeholder="https://votrefunnel.com/landing-page" required>
+                        </div>
+                        <button type="submit" id="crawl-btn" class="primary-editorial-btn">
+                            <span class="btn-text">Aspirer l'Evidence</span>
+                            <div class="loader-spinner hidden" id="crawl-loader"></div>
+                        </button>
+                    </div>
+                </form>
+                <div id="status-message" class="hidden"></div>
+            </section>
+
+            <!-- Results Section -->
+            <section class="results-section">
+                <div class="section-header">
+                    <div>
+                        <div class="editorial-kicker">VAULT DES FUNNELS ASPIRÉS</div>
+                        <h2 class="section-title">Domaines & Preuves Extraites</h2>
+                    </div>
+                    <button id="refresh-btn" class="icon-btn" title="Rafraîchir les preuves">
+                        <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none">
+                            <polyline points="23 4 23 10 17 10"></polyline>
+                            <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
+                        </svg>
+                    </button>
+                </div>
+                
+                <div id="results-grid" class="grid">
+                    <!-- Injected by JS -->
+                </div>
+                <div id="results-loader" class="loader-spinner hidden"></div>
+            </section>
+        </div>
+
+        <!-- MODE 2: BRAND-LED EDITORIAL FUNNEL STUDIO -->
+        <div id="view-studio" class="studio-view hidden">
+            <header class="editorial-header">
+                <div class="editorial-kicker">ORIGINAL SALES SYSTEM GENERATOR</div>
+                <h1 class="editorial-headline">Brand-Led <span class="highlight-gold">Editorial Funnel</span> Studio.</h1>
+                <p class="editorial-lead">
+                    Transformez l'evidence d'audit en un système de conversion premium : hiérarchie éditoriale, preuve quantifiée (Défi / Intervention / Résultat), piliers d'expertise et qualification à faible friction.
+                </p>
+            </header>
+
+            <!-- Studio Toolbar & Responsive Viewport Switcher -->
+            <div class="studio-toolbar glass-panel">
+                <div class="toolbar-left">
+                    <span class="preset-label">Preset Actif :</span>
+                    <strong class="preset-name">Achats Performance 360 (High-Ticket Advisory)</strong>
+                </div>
+                <div class="toolbar-center">
+                    <div class="viewport-switcher">
+                        <button class="viewport-btn active" data-viewport="desktop">
+                            <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>
+                            Desktop 1440px
+                        </button>
+                        <button class="viewport-btn" data-viewport="mobile">
+                            <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect><line x1="12" y1="18" x2="12.01" y2="18"></line></svg>
+                            Mobile 375px
+                        </button>
+                    </div>
+                </div>
+                <div class="toolbar-right">
+                    <button id="copy-funnel-html-btn" class="glass-pill-action">
+                        <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                        Copier le Code HTML
+                    </button>
+                </div>
+            </div>
+
+            <!-- Live Editorial Funnel Frame -->
+            <div class="live-preview-container">
+                <div id="editorial-preview-wrapper" class="preview-wrapper desktop-mode">
+                    <!-- Live Brand-Led Editorial Funnel Injected Here -->
+                    <div id="live-editorial-funnel" class="editorial-funnel-document"></div>
+                </div>
+            </div>
+        </div>
+
+        <footer class="editorial-site-footer">
+            <div class="footer-meta">
+                <span>Funnel Aspirator Studio Pro — Architecture MCP & Moteur Éditorial</span>
+                <a href="/api/docs" target="_blank" class="footer-link">Documentation Swagger</a>
+            </div>
+        </footer>
     </main>
 
     <!-- Modal for details -->
     <div id="details-modal" class="modal hidden">
-        <div class="modal-content glass-panel">
+        <div class="modal-content glass-panel modal-wide">
             <span id="close-modal" class="close-btn">&times;</span>
             <div class="modal-header">
                 <h2 id="modal-domain-title">Domain.com</h2>
-                <a id="download-zip-btn" href="#" class="glass-btn download-btn">
-                    <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none">
-                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                        <polyline points="7 10 12 15 17 10"></polyline>
-                        <line x1="12" y1="15" x2="12" y2="3"></line>
-                    </svg>
-                    Download ZIP
-                </a>
+                <div class="modal-header-actions">
+                    <a id="download-zip-btn" href="#" class="glass-btn download-btn">
+                        <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                            <polyline points="7 10 12 15 17 10"></polyline>
+                            <line x1="12" y1="15" x2="12" y2="3"></line>
+                        </svg>
+                        Download ZIP
+                    </a>
+                </div>
             </div>
+
+            <!-- Modal Tabs -->
+            <div class="modal-tabs">
+                <button class="tab-btn active" data-tab="pages">📄 Pages & Sitemaps</button>
+                <button class="tab-btn" data-tab="design-system">🎨 Design Tokens</button>
+                <button class="tab-btn" data-tab="motion">⚡ Motion & Animations</button>
+                <button class="tab-btn" data-tab="components">🧩 Components & Micro-Interactions</button>
+            </div>
+
             <div class="modal-body">
                 <div id="modal-loader" class="loader-spinner"></div>
-                <div id="modal-pages-list" class="pages-list hidden">
-                    <!-- Pages will be injected here -->
+                
+                <!-- Tab 1: Pages -->
+                <div id="modal-pages-list" class="tab-panel pages-list"></div>
+
+                <!-- Tab 2: Design Tokens -->
+                <div id="modal-design-tokens" class="tab-panel hidden">
+                    <div class="ds-section">
+                        <h3>🎨 Color Palette</h3>
+                        <div id="palette-grid" class="palette-grid"></div>
+                    </div>
+                    <div class="ds-section">
+                        <h3>🔤 Typography & Hierarchy</h3>
+                        <div id="typo-list" class="typo-list"></div>
+                    </div>
+                    <div class="ds-section">
+                        <h3>⚙️ CSS Variables (:root)</h3>
+                        <div id="css-vars-table" class="code-container"></div>
+                    </div>
+                </div>
+
+                <!-- Tab 3: Motion -->
+                <div id="modal-motion" class="tab-panel hidden">
+                    <div class="ds-section">
+                        <h3>🚀 Detected Libraries & Frameworks</h3>
+                        <div id="motion-libs-list" class="badge-list"></div>
+                    </div>
+                    <div class="ds-section">
+                        <h3>🎬 Active CSS Transitions & Animations</h3>
+                        <div id="motion-transitions-list" class="motion-grid"></div>
+                    </div>
+                    <div class="ds-section">
+                        <h3>🌀 Keyframes (@keyframes)</h3>
+                        <div id="motion-keyframes-list" class="keyframes-list"></div>
+                    </div>
+                </div>
+
+                <!-- Tab 4: Components & Micro-Interactions -->
+                <div id="modal-components" class="tab-panel hidden">
+                    <div class="ds-section">
+                        <h3>⚡ Interactive CTAs & :hover States</h3>
+                        <div id="cta-micro-list" class="cta-micro-grid"></div>
+                    </div>
+                    <div class="ds-section">
+                        <h3>📂 Accordions & FAQ States</h3>
+                        <div id="accordions-list" class="accordions-grid"></div>
+                    </div>
+                    <div class="ds-section">
+                        <h3>🧩 Modular Section Blueprints</h3>
+                        <div id="components-list" class="components-grid"></div>
+                    </div>
                 </div>
             </div>
         </div>

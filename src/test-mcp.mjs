@@ -2,7 +2,7 @@ import http from 'http';
 
 console.log('🧪 Starting MCP Streamable HTTP Integration Test against running server...');
 
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
 
 const postRequest = (path, payload, headers = {}) => {
   return new Promise((resolve, reject) => {
@@ -93,17 +93,21 @@ try {
   }
 
   const tools = toolsResponse.body.result.tools;
-  if (!tools || tools.length !== 4) {
-    throw new Error(`Expected 4 tools, got ${tools ? tools.length : 0}`);
+  if (!tools || tools.length !== 8) {
+    throw new Error(`Expected 8 tools, got ${tools ? tools.length : 0}`);
   }
 
   const crawlFunnel = tools.find(t => t.name === 'crawl_funnel');
   const listCrawled = tools.find(t => t.name === 'list_crawled_domains');
   const getCrawl = tools.find(t => t.name === 'get_crawl_details');
   const getCrawledFile = tools.find(t => t.name === 'get_crawled_file');
+  const getDesignSystem = tools.find(t => t.name === 'get_funnel_design_system');
+  const getMotionSpecs = tools.find(t => t.name === 'get_funnel_motion_specs');
+  const getComponents = tools.find(t => t.name === 'get_funnel_components');
+  const getMicroInteractions = tools.find(t => t.name === 'get_funnel_micro_interactions');
 
-  if (!crawlFunnel || !listCrawled || !getCrawl || !getCrawledFile) {
-    throw new Error('Could not find all expected tools by name.');
+  if (!crawlFunnel || !listCrawled || !getCrawl || !getCrawledFile || !getDesignSystem || !getMotionSpecs || !getComponents || !getMicroInteractions) {
+    throw new Error('Could not find all 8 expected tools by name.');
   }
 
   // Assert annotations

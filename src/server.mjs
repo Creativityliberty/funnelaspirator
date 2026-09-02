@@ -167,6 +167,147 @@ app.get('/api/results/:domain', async (req, res) => {
 
 /**
  * @swagger
+ * /api/results/{domain}/design-system:
+ *   get:
+ *     summary: Get extracted Design System tokens (palette, typography, :root CSS variables, shadows)
+ *     parameters:
+ *       - in: path
+ *         name: domain
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Design System tokens
+ */
+app.get('/api/results/:domain/design-system', async (req, res) => {
+  const { domain } = req.params;
+  const dsPath = path.join(EXPORTS_DIR, domain, 'design-system.json');
+  try {
+    const data = await fs.readFile(dsPath, 'utf8');
+    res.json({ success: true, domain, designSystem: JSON.parse(data) });
+  } catch (error) {
+    // Fallback: look in first page data file
+    try {
+      const dataDir = path.join(EXPORTS_DIR, domain, 'data');
+      const files = await fs.readdir(dataDir);
+      if (files.length > 0) {
+        const pageData = JSON.parse(await fs.readFile(path.join(dataDir, files[0]), 'utf8'));
+        return res.json({ success: true, domain, designSystem: pageData.designTokens || {} });
+      }
+    } catch (e) {}
+    res.status(404).json({ success: false, error: 'Design system data not found' });
+  }
+});
+
+/**
+ * @swagger
+ * /api/results/{domain}/motion:
+ *   get:
+ *     summary: Get motion and animation specs (keyframes, transitions, libraries)
+ *     parameters:
+ *       - in: path
+ *         name: domain
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Motion and animation specifications
+ */
+app.get('/api/results/:domain/motion', async (req, res) => {
+  const { domain } = req.params;
+  try {
+    const dataDir = path.join(EXPORTS_DIR, domain, 'data');
+    const files = await fs.readdir(dataDir);
+    const motionList = [];
+    for (const file of files) {
+      if (file.endsWith('.json')) {
+        const pageData = JSON.parse(await fs.readFile(path.join(dataDir, file), 'utf8'));
+        if (pageData.motion) {
+          motionList.push({ page: file.replace('.json', ''), motion: pageData.motion });
+        }
+      }
+    }
+    res.json({ success: true, domain, motion: motionList });
+  } catch (error) {
+    res.status(404).json({ success: false, error: 'Motion data not found' });
+  }
+});
+
+/**
+ * @swagger
+ * /api/results/{domain}/components:
+ *   get:
+ *     summary: Get segmented UI components and section blueprints
+ *     parameters:
+ *       - in: path
+ *         name: domain
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Component blueprints
+ */
+app.get('/api/results/:domain/components', async (req, res) => {
+  const { domain } = req.params;
+  try {
+    const dataDir = path.join(EXPORTS_DIR, domain, 'data');
+    const files = await fs.readdir(dataDir);
+    const allComponents = [];
+    for (const file of files) {
+      if (file.endsWith('.json')) {
+        const pageData = JSON.parse(await fs.readFile(path.join(dataDir, file), 'utf8'));
+        if (pageData.components) {
+          allComponents.push({ page: file.replace('.json', ''), components: pageData.components });
+        }
+      }
+    }
+    res.json({ success: true, domain, components: allComponents });
+  } catch (error) {
+    res.status(404).json({ success: false, error: 'Component data not found' });
+  }
+});
+
+/**
+ * @swagger
+ * /api/results/{domain}/interactions:
+ *   get:
+ *     summary: Get micro-interactions, button hover states and accordion states
+ *     parameters:
+ *       - in: path
+ *         name: domain
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Micro-interactions and interactive states
+ */
+app.get('/api/results/:domain/interactions', async (req, res) => {
+  const { domain } = req.params;
+  try {
+    const dataDir = path.join(EXPORTS_DIR, domain, 'data');
+    const files = await fs.readdir(dataDir);
+    const interactionsList = [];
+    for (const file of files) {
+      if (file.endsWith('.json')) {
+        const pageData = JSON.parse(await fs.readFile(path.join(dataDir, file), 'utf8'));
+        if (pageData.microInteractions) {
+          interactionsList.push({ page: file.replace('.json', ''), microInteractions: pageData.microInteractions });
+        }
+      }
+    }
+    res.json({ success: true, domain, interactions: interactionsList });
+  } catch (error) {
+    res.status(404).json({ success: false, error: 'Interaction data not found' });
+  }
+});
+
+
+/**
+ * @swagger
  * /api/download/{domain}:
  *   get:
  *     summary: Download the entire domain export folder as a ZIP file
@@ -356,6 +497,143 @@ function createMcpServer() {
         return {
           isError: true,
           content: [{ type: "text", text: `Failed to read file: ${error.message}` }]
+        };
+      }
+    }
+  );
+
+  // Tool 5: get_funnel_design_system
+  mcpServer.registerTool(
+    "get_funnel_design_system",
+    {
+      description: "Retrieve complete Design System tokens (:root CSS variables, color palettes, typography scale, shadows, border radii) for a crawled domain.",
+      inputSchema: z.object({
+        domain: z.string().describe("The domain name folder to get the design system for"),
+      }),
+      annotations: {
+        readOnlyHint: true
+      }
+    },
+    async ({ domain }) => {
+      const dsPath = path.join(EXPORTS_DIR, domain, 'design-system.json');
+      try {
+        const data = JSON.parse(await fs.readFile(dsPath, 'utf8'));
+        return {
+          structuredContent: { success: true, domain, designSystem: data },
+          content: [{ type: "text", text: JSON.stringify({ success: true, domain, designSystem: data }, null, 2) }]
+        };
+      } catch (error) {
+        return {
+          isError: true,
+          content: [{ type: "text", text: `Design system not found for ${domain}: ${error.message}` }]
+        };
+      }
+    }
+  );
+
+  // Tool 6: get_funnel_motion_specs
+  mcpServer.registerTool(
+    "get_funnel_motion_specs",
+    {
+      description: "Extract motion specs, active CSS transitions, @keyframes animations, and detected JS libraries (GSAP, ScrollTrigger, Framer Motion, etc.) for a domain.",
+      inputSchema: z.object({
+        domain: z.string().describe("The domain name folder to inspect motion for"),
+      }),
+      annotations: {
+        readOnlyHint: true
+      }
+    },
+    async ({ domain }) => {
+      try {
+        const dataDir = path.join(EXPORTS_DIR, domain, 'data');
+        const files = await fs.readdir(dataDir);
+        const motions = [];
+        for (const file of files) {
+          if (file.endsWith('.json')) {
+            const pageData = JSON.parse(await fs.readFile(path.join(dataDir, file), 'utf8'));
+            if (pageData.motion) motions.push({ page: file.replace('.json', ''), motion: pageData.motion });
+          }
+        }
+        return {
+          structuredContent: { success: true, domain, motions },
+          content: [{ type: "text", text: JSON.stringify({ success: true, domain, motions }, null, 2) }]
+        };
+      } catch (error) {
+        return {
+          isError: true,
+          content: [{ type: "text", text: `Failed to get motion specs for ${domain}: ${error.message}` }]
+        };
+      }
+    }
+  );
+
+  // Tool 7: get_funnel_components
+  mcpServer.registerTool(
+    "get_funnel_components",
+    {
+      description: "Get segmented UI component blueprints (Hero, Pricing, FAQ, Testimonials, Lead Forms) with isolated HTML structures and styles.",
+      inputSchema: z.object({
+        domain: z.string().describe("The domain name folder to extract components for"),
+      }),
+      annotations: {
+        readOnlyHint: true
+      }
+    },
+    async ({ domain }) => {
+      try {
+        const dataDir = path.join(EXPORTS_DIR, domain, 'data');
+        const files = await fs.readdir(dataDir);
+        const components = [];
+        for (const file of files) {
+          if (file.endsWith('.json')) {
+            const pageData = JSON.parse(await fs.readFile(path.join(dataDir, file), 'utf8'));
+            if (pageData.components) components.push({ page: file.replace('.json', ''), components: pageData.components });
+          }
+        }
+        return {
+          structuredContent: { success: true, domain, components },
+          content: [{ type: "text", text: JSON.stringify({ success: true, domain, components }, null, 2) }]
+        };
+      } catch (error) {
+        return {
+          isError: true,
+          content: [{ type: "text", text: `Failed to get components for ${domain}: ${error.message}` }]
+        };
+      }
+    }
+  );
+
+  // Tool 8: get_funnel_micro_interactions
+  mcpServer.registerTool(
+    "get_funnel_micro_interactions",
+    {
+      description: "Extract micro-interactions: CTA button hover state diffs, accordion collapsed/expanded states, and sticky/fixed headers.",
+      inputSchema: z.object({
+        domain: z.string().describe("The domain name folder to extract micro-interactions for"),
+      }),
+      annotations: {
+        readOnlyHint: true
+      }
+    },
+    async ({ domain }) => {
+      try {
+        const dataDir = path.join(EXPORTS_DIR, domain, 'data');
+        const files = await fs.readdir(dataDir);
+        const interactions = [];
+        for (const file of files) {
+          if (file.endsWith('.json')) {
+            const pageData = JSON.parse(await fs.readFile(path.join(dataDir, file), 'utf8'));
+            if (pageData.microInteractions) interactions.push({ page: file.replace('.json', ''), microInteractions: pageData.microInteractions });
+          }
+        }
+        return {
+          structuredContent: { success: true, domain, interactions },
+          content: [{ type: "text", text: JSON.stringify({ success: true, domain, interactions }, null, 2) }]
+        };
+      } catch (error) {
+        return {
+          isError: true,
+          content: [{ type: "text", text: `Failed to get micro-interactions for ${domain}: ${error.message}` }]
         };
       }
     }
