@@ -90,6 +90,42 @@ test('verifier records unavailable font references without failing resource inte
   }
 });
 
+test('verifier fails when generated JS or JSON still contains known tracking data', async () => {
+  const rebuildRoot = await makeTree();
+  await fs.mkdir(path.join(rebuildRoot, 'data'), { recursive: true });
+  await fs.writeFile(
+    path.join(rebuildRoot, 'data', 'page.json'),
+    JSON.stringify({ image: '../assets/app.citeme.io/api/beacon/demo/pixel' }),
+  );
+  await fs.writeFile(
+    path.join(rebuildRoot, 'data', 'registry.js'),
+    'export const pages={"page-1":{"tracker":"https://www.facebook.com/tr?id=1"}};\n',
+  );
+
+  try {
+    const report = await verifyRebuild({
+      domainDir: rebuildRoot,
+      rebuildRoot,
+      manifest: {
+        componentIds: ['cmp-hero'],
+        generatedFiles: [
+          'index.html',
+          'app.js',
+          'assets/hero.jpg',
+          'components/registry.js',
+          'data/page.json',
+          'data/registry.js',
+        ],
+      },
+      sourceHashes: {},
+    });
+    assert.equal(report.checks.tracking, 'fail');
+    assert.equal(report.status, 'fail');
+  } finally {
+    await fs.rm(rebuildRoot, { recursive: true, force: true });
+  }
+});
+
 test('verifier detects mutated source evidence', async () => {
   const domainDir = await fs.mkdtemp(path.join(os.tmpdir(), 'aspirator-source-integrity-'));
   const rebuildRoot = path.join(domainDir, 'rebuild-output');
