@@ -45,15 +45,19 @@ function domainFromPages(sitemap) {
 
 function candidateDataRefs(page) {
   const refs = [];
-  if (page.data) refs.push(page.data);
-  if (page.dataPath) refs.push(page.dataPath);
-  if (page.json) refs.push(page.json);
+  if (typeof page.data === 'string') refs.push(page.data);
+  if (typeof page.dataPath === 'string') refs.push(page.dataPath);
+  if (typeof page.json === 'string') refs.push(page.json);
   const htmlRef = page.html || page.htmlPath;
   if (htmlRef) {
     const base = path.basename(htmlRef, path.extname(htmlRef));
     refs.push(path.join('data', `${base}.json`));
   }
   return [...new Set(refs.filter(Boolean))];
+}
+
+function portablePath(value) {
+  return value ? String(value).replace(/\\/g, '/') : null;
 }
 
 export async function loadSiteExportV2(exportDir) {
@@ -76,10 +80,14 @@ export async function loadSiteExportV2(exportDir) {
   for (let index = 0; index < sitemap.length; index += 1) {
     const source = sitemap[index] || {};
     let pageData = null;
+    let dataPath = null;
     for (const ref of candidateDataRefs(source)) {
       const candidate = assertInsideRoot(root, path.join(root, ref));
       pageData = await readJsonIfExists(candidate);
-      if (pageData) break;
+      if (pageData) {
+        dataPath = portablePath(ref);
+        break;
+      }
     }
 
     const html = source.html || source.htmlPath || pageData?.html || null;
@@ -104,6 +112,7 @@ export async function loadSiteExportV2(exportDir) {
       title: source.title || pageData?.title || '',
       html,
       screenshot,
+      dataPath,
       data: pageData || {},
       designTokens: pageData?.designTokens || {},
       motion: pageData?.motion || {},
