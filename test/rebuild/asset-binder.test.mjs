@@ -44,6 +44,22 @@ test('asset binder resolves captured ../assets references inside the export root
   }
 });
 
+test('asset binder ignores virtual Next image optimizer srcset candidates', async () => {
+  const rebuildRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'aspirator-assets-next-'));
+  try {
+    const result = await bindAssets({
+      references: ['/_next/image?url=https%3A%2F%2Fcdn.example.com%2Fhero.webp&w=1200&q=75'],
+      sourceRoot,
+      rebuildRoot,
+      assetRegistry: [],
+    });
+    assert.equal(result.unresolved.length, 0);
+    assert.equal(result.assets.length, 0);
+  } finally {
+    await fs.rm(rebuildRoot, { recursive: true, force: true });
+  }
+});
+
 test('asset binder reports missing local resources instead of inventing them', async () => {
   const rebuildRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'aspirator-assets-missing-'));
   try {
