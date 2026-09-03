@@ -51,7 +51,7 @@ const swaggerOptions = {
       },
     ],
   },
-  apis: ['./src/server.mjs'], // Search for swagger comments in this file
+  apis: ['./src/server-core.mjs'], // Search for swagger comments in the legacy server core
 };
 
 const swaggerDocs = swaggerJsdoc(swaggerOptions);
@@ -305,7 +305,6 @@ app.get('/api/results/:domain/interactions', async (req, res) => {
     res.status(404).json({ success: false, error: 'Interaction data not found' });
   }
 });
-
 
 /**
  * @swagger
@@ -922,7 +921,7 @@ async function getOrCreateTransport(req) {
 
   transport.onclose = () => {
     if (transport.sessionId) {
-      console.log(`[MCP] Streamable HTTP session closed: ${transport.sessionId}`);
+      console.log(`[MCP] Streamable HTTP session closed for session: ${transport.sessionId}`);
       mcpSessions.delete(transport.sessionId);
     }
   };
