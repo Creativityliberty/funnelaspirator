@@ -45,15 +45,71 @@ function domainFromPages(sitemap) {
 
 function candidateDataRefs(page) {
   const refs = [];
-  if (page.data) refs.push(page.data);
-  if (page.dataPath) refs.push(page.dataPath);
-  if (page.json) refs.push(page.json);
+  if (typeof page.data === 'string') refs.push(page.data);
+  if (typeof page.dataPath === 'string') refs.push(page.dataPath);
+  if (typeof page.json === 'string') refs.push(page.json);
   const htmlRef = page.html || page.htmlPath;
   if (htmlRef) {
     const base = path.basename(htmlRef, path.extname(htmlRef));
     refs.push(path.join('data', `${base}.json`));
   }
   return [...new Set(refs.filter(Boolean))];
+}
+
+function portablePath(value) {
+  return value ? String(value).replace(/\\/g, '/') : null;
+}
+
+function classesOf(component = {}) {
+  return String(component.classes || component.className || '')
+    .split(/\s+/)
+    .filter(Boolean)
+    .sort()
+    .join(' ');
+}
+
+function enrichExplicitComponents(explicit, derived) {
+  const used = new Set();
+  return explicit.map((component, index) => {
+    if (component?.locator?.fingerprint) return component;
+    const tag = String(component?.tag || '').toLowerCase();
+    const id = component?.id || '';
+    const classes = classesOf(component);
+    const role = String(component?.role || component?.type || '').toLowerCase();
+
+    const findUnused = (predicate) => derived.findIndex((candidate, candidateIndex) => (
+      !used.has(candidateIndex) && predicate(candidate)
+    ));
+
+    let matchIndex = -1;
+    if (id) {
+      matchIndex = findUnused((candidate) => candidate.id === id);
+    }
+    if (matchIndex < 0 && classes) {
+      matchIndex = findUnused((candidate) => (
+        String(candidate.tag || '').toLowerCase() === tag
+        && classesOf(candidate) === classes
+      ));
+    }
+    if (matchIndex < 0 && role) {
+      matchIndex = findUnused((candidate) => (
+        String(candidate.tag || '').toLowerCase() === tag
+        && String(candidate.role || '').toLowerCase() === role
+      ));
+    }
+    if (
+      matchIndex < 0
+      && derived[index]
+      && !used.has(index)
+      && String(derived[index].tag || '').toLowerCase() === tag
+    ) {
+      matchIndex = index;
+    }
+
+    if (matchIndex < 0) return { ...component, locator: null };
+    used.add(matchIndex);
+    return { ...component, locator: derived[matchIndex].locator || null };
+  });
 }
 
 export async function loadSiteExportV2(exportDir) {
@@ -76,10 +132,14 @@ export async function loadSiteExportV2(exportDir) {
   for (let index = 0; index < sitemap.length; index += 1) {
     const source = sitemap[index] || {};
     let pageData = null;
+    let dataPath = null;
     for (const ref of candidateDataRefs(source)) {
       const candidate = assertInsideRoot(root, path.join(root, ref));
       pageData = await readJsonIfExists(candidate);
-      if (pageData) break;
+      if (pageData) {
+        dataPath = portablePath(ref);
+        break;
+      }
     }
 
     const html = source.html || source.htmlPath || pageData?.html || null;
@@ -90,11 +150,13 @@ export async function loadSiteExportV2(exportDir) {
       : null;
 
     const explicit = Array.isArray(pageData?.components) ? pageData.components : [];
-    const fromHtml = explicit.length ? [] : deriveComponentsFromHtml(htmlText);
+    const fromHtml = deriveComponentsFromHtml(htmlText);
     const fromSections = explicit.length || fromHtml.length
       ? []
       : deriveComponentsFromSections(pageData?.sections);
-    const components = explicit.length ? explicit : (fromHtml.length ? fromHtml : fromSections);
+    const components = explicit.length
+      ? enrichExplicitComponents(explicit, fromHtml)
+      : (fromHtml.length ? fromHtml : fromSections);
 
     pages.push({
       id: makePageId(index),
@@ -104,6 +166,7 @@ export async function loadSiteExportV2(exportDir) {
       title: source.title || pageData?.title || '',
       html,
       screenshot,
+      dataPath,
       data: pageData || {},
       designTokens: pageData?.designTokens || {},
       motion: pageData?.motion || {},

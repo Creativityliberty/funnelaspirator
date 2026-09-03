@@ -1,10 +1,18 @@
-export function setPreview({ frame, device, title, domain, page }) {
+export function setPreview({ frame, device, title, domain, page, mode = 'original', archetypeId = null }) {
   if (!page) {
     frame.removeAttribute('src');
     title.innerHTML = '<strong>Preview</strong><small>—</small>';
     return;
   }
-  title.innerHTML = `<strong>${escapeHtml(page.title || page.route)}</strong><small>${escapeHtml(page.route)}</small>`;
+
+  const label = mode === 'rebuilt' ? 'REBUILT' : 'ORIGINAL';
+  title.innerHTML = `<strong>${escapeHtml(page.title || page.route)}</strong><small>${label} · ${escapeHtml(page.route)}</small>`;
+
+  if (mode === 'rebuilt' && archetypeId) {
+    frame.src = `/api/results/${encodeURIComponent(domain)}/system/rebuild/archetypes/${encodeURIComponent(archetypeId)}/preview?page=${encodeURIComponent(page.id)}`;
+    return;
+  }
+
   frame.src = `/exports/${encodeURIComponent(domain)}/${page.preview}`;
 }
 

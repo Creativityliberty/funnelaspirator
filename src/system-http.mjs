@@ -1,9 +1,37 @@
+import fs from 'fs/promises';
 import path from 'path';
 import { compileSiteSystem } from './compiler/compile-site.mjs';
 import { readCompiledSystem, resolveDomainDir, findById } from './compiler/system-store.mjs';
+import { rebuildArchetype } from './rebuild/rebuild-archetype.mjs';
+import { readRebuildManifest, readRebuildReport } from './rebuild/rebuild-store.mjs';
+import { resolveRebuildPaths } from './rebuild/paths.mjs';
 
 function statusFor(error) {
-  return ['SYSTEM_NOT_FOUND', 'ITEM_NOT_FOUND'].includes(error?.code) ? 404 : 400;
+  const statusByCode = {
+    SYSTEM_NOT_FOUND: 404,
+    ITEM_NOT_FOUND: 404,
+    SOURCE_MISSING: 404,
+    INVALID_ARCHETYPE: 404,
+    COMPONENT_UNRESOLVED: 422,
+    ASSET_UNRESOLVED: 422,
+    CSS_UNRESOLVED: 422,
+    OUTPUT_ESCAPE: 400,
+    VERIFY_FAILED: 422,
+  };
+  return statusByCode[error?.code] || 400;
+}
+
+function escapeAttribute(value = '') {
+  return String(value).replace(/&/g, '&amp;').replace(/"/g, '&quot;');
+}
+
+export function injectRebuildBaseHref(html, { domain, archetypeId } = {}) {
+  const baseHref = `/exports/${encodeURIComponent(String(domain || ''))}/rebuild/${encodeURIComponent(String(archetypeId || ''))}/`;
+  const tag = `<base href="${escapeAttribute(baseHref)}">`;
+  const source = String(html || '');
+  if (/<base\b[^>]*>/i.test(source)) return source.replace(/<base\b[^>]*>/i, tag);
+  if (/<head\b[^>]*>/i.test(source)) return source.replace(/<head\b[^>]*>/i, (head) => `${head}${tag}`);
+  return `${tag}${source}`;
 }
 
 export function registerSystemRoutes(app, { exportsDir }) {
@@ -61,6 +89,52 @@ export function registerSystemRoutes(app, { exportsDir }) {
       res.sendFile(path.resolve(domainDir, page.preview));
     } catch (error) {
       res.status(statusFor(error)).json({ success: false, error: error.message });
+    }
+  });
+
+  app.post('/api/results/:domain/system/rebuild/archetypes/:archetypeId', async (req, res) => {
+    try {
+      const domainDir = resolveDomainDir(exportsDir, req.params.domain);
+      const manifest = await rebuildArchetype({ domainDir, archetypeId: req.params.archetypeId });
+      res.json({ success: true, domain: req.params.domain, manifest });
+    } catch (error) {
+      res.status(statusFor(error)).json({ success: false, code: error?.code || null, error: error.message });
+    }
+  });
+
+  app.get('/api/results/:domain/system/rebuild/archetypes/:archetypeId', async (req, res) => {
+    try {
+      const manifest = await readRebuildManifest(exportsDir, req.params.domain, req.params.archetypeId);
+      res.json({ success: true, domain: req.params.domain, manifest });
+    } catch (error) {
+      res.status(statusFor(error)).json({ success: false, code: error?.code || null, error: error.message });
+    }
+  });
+
+  app.get('/api/results/:domain/system/rebuild/archetypes/:archetypeId/report', async (req, res) => {
+    try {
+      const report = await readRebuildReport(exportsDir, req.params.domain, req.params.archetypeId);
+      res.json({ success: true, domain: req.params.domain, report });
+    } catch (error) {
+      res.status(statusFor(error)).json({ success: false, code: error?.code || null, error: error.message });
+    }
+  });
+
+  app.get('/api/results/:domain/system/rebuild/archetypes/:archetypeId/preview', async (req, res) => {
+    try {
+      const manifest = await readRebuildManifest(exportsDir, req.params.domain, req.params.archetypeId);
+      if (!(manifest.generatedFiles || []).includes('index.html')) {
+        throw Object.assign(new Error('Rebuild preview not available'), { code: 'SOURCE_MISSING' });
+      }
+      const domainDir = resolveDomainDir(exportsDir, req.params.domain);
+      const { rebuildRoot } = resolveRebuildPaths(domainDir, req.params.archetypeId);
+      const indexHtml = await fs.readFile(path.resolve(rebuildRoot, 'index.html'), 'utf8');
+      res.type('html').send(injectRebuildBaseHref(indexHtml, {
+        domain: req.params.domain,
+        archetypeId: req.params.archetypeId,
+      }));
+    } catch (error) {
+      res.status(statusFor(error)).json({ success: false, code: error?.code || null, error: error.message });
     }
   });
 }

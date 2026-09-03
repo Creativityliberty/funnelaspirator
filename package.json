@@ -7,6 +7,7 @@
     "dev": "node src/server.mjs",
     "crawl": "node src/crawl.mjs",
     "compile": "node src/compile-cli.mjs",
+    "rebuild": "node src/rebuild-cli.mjs",
     "test": "node --test test/**/*.test.mjs",
     "test:mcp": "node src/test-mcp.mjs",
     "install:browsers": "playwright install chromium"

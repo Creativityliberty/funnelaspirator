@@ -1,9 +1,9 @@
-name: M01 Site System Compiler
+name: Aspirator Verification
 
 on:
   push:
     branches:
-      - feat/m01-site-system-compiler
+      - "feat/**"
   pull_request:
     branches:
       - main
@@ -11,7 +11,7 @@ on:
 jobs:
   verify:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 12
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -33,7 +33,13 @@ jobs:
           node --check src/compiler/html-components.mjs
           node --check src/system-http.mjs
           node --check src/system-mcp.mjs
+          node --check src/rebuild/rebuild-archetype.mjs
+          node --check src/rebuild/runtime-builder.mjs
+          node --check src/rebuild/verifier.mjs
+          node --check src/rebuild-cli.mjs
           node --check public/studio/explorer.js
+          node --check public/studio/preview.js
+          node --check public/studio/system-inspector.js
 
       - name: Unit and contract tests
         run: npm test

@@ -1,6 +1,6 @@
 import path from 'path';
 
-export const SITE_SYSTEM_VERSION = '1.0';
+export const SITE_SYSTEM_VERSION = '1.1';
 
 export function assertInsideRoot(rootDir, candidatePath) {
   const root = path.resolve(rootDir);

@@ -27,11 +27,18 @@
       <section class="preview-panel">
         <div class="preview-toolbar">
           <div id="preview-title"><strong>Preview</strong><small>—</small></div>
-          <div class="viewport-switcher" id="viewport-switcher">
-            <button data-width="1440" class="active">1440</button>
-            <button data-width="1024">1024</button>
-            <button data-width="768">768</button>
-            <button data-width="390">390</button>
+          <div class="preview-tools">
+            <div id="rebuild-controls" class="rebuild-controls" aria-label="Reconstruction preview controls">
+              <button type="button" data-preview-mode="original" class="active">Original</button>
+              <button type="button" id="rebuild-btn" disabled>Build</button>
+              <button type="button" data-preview-mode="rebuilt" disabled>Rebuilt</button>
+            </div>
+            <div class="viewport-switcher" id="viewport-switcher">
+              <button data-width="1440" class="active">1440</button>
+              <button data-width="1024">1024</button>
+              <button data-width="768">768</button>
+              <button data-width="390">390</button>
+            </div>
           </div>
         </div>
         <div id="preview-stage" class="preview-stage">
@@ -47,7 +54,7 @@
       </aside>
     </section>
 
-    <footer class="statusbar"><span id="status-text">READY</span><span>Pages · Archetypes · Components · Assets · Motion</span></footer>
+    <footer class="statusbar"><span id="status-text">READY</span><span>Pages · Archetypes · Components · Assets · Rebuild</span></footer>
   </main>
   <script type="module" src="/studio/explorer.js"></script>
 </body>

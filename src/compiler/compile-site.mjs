@@ -38,6 +38,7 @@ function publicPage(page, archetypes, components) {
     url: page.url,
     title: page.title,
     html: page.html,
+    data: page.dataPath || null,
     screenshot: page.screenshot,
     preview: page.html ? `system/preview/${page.id}.html` : null,
     archetypeId: archetype?.id || null,

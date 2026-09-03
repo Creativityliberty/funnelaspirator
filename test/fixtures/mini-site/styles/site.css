@@ -1,1 +1,6 @@
 body { margin: 0; }
+:root { --m02-brand: #171412; }
+.project-hero { background-image: url('../assets/hero.jpg'); animation: reveal 300ms ease; }
+.project-hero:hover { transform: translateY(-2px); }
+@media (max-width: 700px) { .project-hero { padding: 1rem; } }
+@keyframes reveal { from { opacity: 0; } to { opacity: 1; } }

@@ -33,7 +33,32 @@ function addPageButtons(parent, pageIds, system, onSelectPage) {
   });
 }
 
-export function renderInspector({ container, selection, system, onSelectPage }) {
+function addRebuildDetails(parent, rebuild, reportUrl) {
+  if (!rebuild) return;
+  const manifest = rebuild.manifest || rebuild;
+  const report = rebuild.report || null;
+  const metrics = report?.metrics || {};
+  const unresolvedDependencies = (manifest.diagnostics?.unresolvedComponents?.length || 0)
+    + (report?.brokenResources?.length || 0);
+
+  add(parent, 'span', 'inspect-kicker rebuild-kicker', 'REBUILD');
+  addRows(parent, [
+    ['Verification', manifest.verification?.status || report?.status],
+    ['Archetype ID', manifest.archetypeId],
+    ['Components', `${metrics.componentsResolved ?? manifest.componentIds?.length ?? 0} / ${metrics.componentsExpected ?? manifest.componentIds?.length ?? 0}`],
+    ['Assets', `${metrics.assetsResolved ?? manifest.assetIds?.length ?? 0} / ${metrics.assetsReferenced ?? manifest.assetIds?.length ?? 0}`],
+    ['Unresolved', unresolvedDependencies],
+  ]);
+
+  if (reportUrl) {
+    const link = add(parent, 'a', 'report-link', 'Open fidelity report');
+    link.href = reportUrl;
+    link.target = '_blank';
+    link.rel = 'noopener';
+  }
+}
+
+export function renderInspector({ container, selection, system, onSelectPage, rebuild = null, reportUrl = '' }) {
   clear(container);
   if (!selection) {
     add(container, 'p', 'empty', 'Sélectionne une page, un archétype ou un composant.');
@@ -62,6 +87,7 @@ export function renderInspector({ container, selection, system, onSelectPage }) 
       ['Pages', item.pageIds.length], ['Confidence', item.confidence],
       ['Representative', item.representativePageId],
     ]);
+    addRebuildDetails(container, rebuild, reportUrl);
     addPageButtons(container, item.pageIds, system, onSelectPage);
     return;
   }
