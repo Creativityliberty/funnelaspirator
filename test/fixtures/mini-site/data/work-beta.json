@@ -1,0 +1,14 @@
+{
+  "url": "https://example.test/work/beta",
+  "title": "Beta Project",
+  "designTokens": {},
+  "motion": {},
+  "microInteractions": {},
+  "components": [
+    {"tag":"header","role":"navigation","classes":"site-header"},
+    {"tag":"section","role":"project-hero","classes":"project-hero"},
+    {"tag":"section","role":"gallery","classes":"project-gallery"},
+    {"tag":"section","role":"next-project","classes":"next-project"},
+    {"tag":"footer","role":"contentinfo","classes":"site-footer"}
+  ]
+}
