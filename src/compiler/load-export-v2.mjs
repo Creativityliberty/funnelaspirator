@@ -60,6 +60,58 @@ function portablePath(value) {
   return value ? String(value).replace(/\\/g, '/') : null;
 }
 
+function classesOf(component = {}) {
+  return String(component.classes || component.className || '')
+    .split(/\s+/)
+    .filter(Boolean)
+    .sort()
+    .join(' ');
+}
+
+function enrichExplicitComponents(explicit, derived) {
+  const used = new Set();
+  return explicit.map((component, index) => {
+    if (component?.locator?.fingerprint) return component;
+    const tag = String(component?.tag || '').toLowerCase();
+    const id = component?.id || '';
+    const classes = classesOf(component);
+    const role = String(component?.role || component?.type || '').toLowerCase();
+
+    const findUnused = (predicate) => derived.findIndex((candidate, candidateIndex) => (
+      !used.has(candidateIndex) && predicate(candidate)
+    ));
+
+    let matchIndex = -1;
+    if (id) {
+      matchIndex = findUnused((candidate) => candidate.id === id);
+    }
+    if (matchIndex < 0 && classes) {
+      matchIndex = findUnused((candidate) => (
+        String(candidate.tag || '').toLowerCase() === tag
+        && classesOf(candidate) === classes
+      ));
+    }
+    if (matchIndex < 0 && role) {
+      matchIndex = findUnused((candidate) => (
+        String(candidate.tag || '').toLowerCase() === tag
+        && String(candidate.role || '').toLowerCase() === role
+      ));
+    }
+    if (
+      matchIndex < 0
+      && derived[index]
+      && !used.has(index)
+      && String(derived[index].tag || '').toLowerCase() === tag
+    ) {
+      matchIndex = index;
+    }
+
+    if (matchIndex < 0) return { ...component, locator: null };
+    used.add(matchIndex);
+    return { ...component, locator: derived[matchIndex].locator || null };
+  });
+}
+
 export async function loadSiteExportV2(exportDir) {
   const root = path.resolve(exportDir);
   const sitemapPath = assertInsideRoot(root, path.join(root, 'sitemap.json'));
@@ -98,11 +150,13 @@ export async function loadSiteExportV2(exportDir) {
       : null;
 
     const explicit = Array.isArray(pageData?.components) ? pageData.components : [];
-    const fromHtml = explicit.length ? [] : deriveComponentsFromHtml(htmlText);
+    const fromHtml = deriveComponentsFromHtml(htmlText);
     const fromSections = explicit.length || fromHtml.length
       ? []
       : deriveComponentsFromSections(pageData?.sections);
-    const components = explicit.length ? explicit : (fromHtml.length ? fromHtml : fromSections);
+    const components = explicit.length
+      ? enrichExplicitComponents(explicit, fromHtml)
+      : (fromHtml.length ? fromHtml : fromSections);
 
     pages.push({
       id: makePageId(index),
