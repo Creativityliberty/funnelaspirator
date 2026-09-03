@@ -32,3 +32,16 @@ test('signature ignores copy and brand-specific class noise', () => {
   assert.equal(a.routeDepth, 2);
   assert.equal(a.ctaCount, 1);
 });
+
+test('signature falls back to crawler ctas and forms when deep interaction fields are absent', () => {
+  const signature = buildPageSignature({
+    route: '/expertise/branding',
+    components: [{ role: 'header' }, { role: 'hero' }, { role: 'expertise' }, { role: 'footer' }],
+    data: {
+      ctas: [{ text: 'Start' }, { text: 'Learn more' }],
+      forms: [{ action: '/contact' }],
+    },
+  });
+  assert.equal(signature.ctaCount, 2);
+  assert.equal(signature.formCount, 1);
+});
