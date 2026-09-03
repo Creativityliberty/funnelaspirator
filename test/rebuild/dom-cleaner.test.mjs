@@ -24,3 +24,13 @@ test('cleaner neutralizes production form actions but preserves the original tar
   assert.match(result.html, /action="#"/);
   assert.match(result.html, /data-aspirator-original-action="https:\/\/example\.com\/submit"/);
 });
+
+test('cleaner removes captured Next image optimizer srcsets while keeping local src evidence', () => {
+  const result = cleanRebuildDocument({ html: `
+    <html><body>
+      <img src="../assets/www.example.com/_next/image-local.jpg" srcset="/_next/image?url=https%3A%2F%2Fcdn.example.com%2Fhero.webp&w=640&q=75 640w, /_next/image?url=https%3A%2F%2Fcdn.example.com%2Fhero.webp&w=1200&q=75 1200w" alt="Hero">
+    </body></html>
+  ` });
+  assert.doesNotMatch(result.html, /srcset=/i);
+  assert.match(result.html, /src="\.\.\/assets\/www\.example\.com\/_next\/image-local\.jpg"/);
+});
