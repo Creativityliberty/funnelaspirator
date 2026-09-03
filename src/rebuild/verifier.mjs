@@ -6,6 +6,7 @@ import { assertInsideRoot } from '../compiler/schema.mjs';
 
 const EXTERNAL = /^(?:https?:|data:|blob:|mailto:|tel:|javascript:|\/\/|#)/i;
 const TRACKING = /googletagmanager|google-analytics|facebook\.net|posthog|self\.__next_f|__NEXT_DATA__/i;
+const FONT_EXT = /\.(?:woff2?|ttf|otf)(?:$|[?#])/i;
 
 async function exists(file) {
   try {
@@ -72,6 +73,8 @@ function jsRefs(js) {
 async function verifyReferences(rebuildRoot, generatedFiles) {
   const broken = [];
   const referenced = [];
+  const fontReferences = [];
+
   for (const relative of generatedFiles || []) {
     const file = assertInsideRoot(rebuildRoot, path.join(rebuildRoot, relative));
     if (!(await exists(file))) {
@@ -83,6 +86,13 @@ async function verifyReferences(rebuildRoot, generatedFiles) {
     const text = await fs.readFile(file, 'utf8');
     const refs = ext === '.html' ? htmlRefs(text) : ext === '.css' ? cssRefs(text) : jsRefs(text);
     for (const reference of refs) {
+      if (FONT_EXT.test(reference)) {
+        const target = localTarget(rebuildRoot, file, reference);
+        const available = Boolean(target && target !== Symbol.for('escape') && await exists(target));
+        fontReferences.push({ from: relative, reference, available });
+        continue;
+      }
+
       const target = localTarget(rebuildRoot, file, reference);
       if (!target) continue;
       referenced.push({ from: relative, reference });
@@ -93,7 +103,7 @@ async function verifyReferences(rebuildRoot, generatedFiles) {
       }
     }
   }
-  return { broken, referenced };
+  return { broken, referenced, fontReferences };
 }
 
 async function verifySourceHashes(domainDir, sourceHashes) {
@@ -135,7 +145,9 @@ export async function verifyRebuild({ domainDir, rebuildRoot, manifest = {}, sou
     documentOk = $('html').length === 1 && $('body').length === 1;
   }
 
-  const refs = isolated ? await verifyReferences(root, manifest.generatedFiles || []) : { broken: [], referenced: [] };
+  const refs = isolated
+    ? await verifyReferences(root, manifest.generatedFiles || [])
+    : { broken: [], referenced: [], fontReferences: [] };
   const sourceMismatches = await verifySourceHashes(domain, sourceHashes);
   const registryPath = isolated ? path.join(root, 'components', 'registry.js') : null;
   const registry = registryPath && await exists(registryPath) ? await fs.readFile(registryPath, 'utf8') : '';
@@ -164,20 +176,26 @@ export async function verifyRebuild({ domainDir, rebuildRoot, manifest = {}, sou
   };
   const status = Object.values(checks).every((value) => value === 'pass') ? 'pass' : 'fail';
 
+  const assetRef = (item) => /(?:assets\/|\.(?:png|jpe?g|webp|svg|gif|avif|mp4|webm))/i.test(item.reference);
+  const referencedAssets = refs.referenced.filter(assetRef);
+  const brokenAssets = refs.broken.filter(assetRef);
+
   return {
     status,
     checks,
     metrics: {
       componentsExpected: expectedComponents.length,
       componentsResolved: expectedComponents.length - missingComponents.length,
-      assetsReferenced: refs.referenced.filter((item) => /(?:assets\/|\.(?:png|jpe?g|webp|svg|gif|avif|mp4|webm))/i.test(item.reference)).length,
-      assetsResolved: refs.referenced.filter((item) => /(?:assets\/|\.(?:png|jpe?g|webp|svg|gif|avif|mp4|webm))/i.test(item.reference)).length
-        - refs.broken.filter((item) => /(?:assets\/|\.(?:png|jpe?g|webp|svg|gif|avif|mp4|webm))/i.test(item.reference)).length,
+      assetsReferenced: referencedAssets.length,
+      assetsResolved: referencedAssets.length - brokenAssets.length,
       brokenLinks: refs.broken.length,
       missingComponents: missingComponents.length,
       sourceMismatches: sourceMismatches.length,
+      fontReferences: refs.fontReferences.length,
+      fontReferencesMissing: refs.fontReferences.filter((item) => !item.available).length,
     },
     brokenResources: refs.broken,
+    fontReferences: refs.fontReferences,
     missingComponents,
     sourceMismatches,
     visual: { status: 'not-scored' },
