@@ -34,6 +34,27 @@ test('resolver loads representative source and page data inside export root', as
   });
 });
 
+test('resolver excludes executable scripts and hidden tracking pixels from render asset refs', async () => {
+  await withCompiledFixture(async ({ temp, system, archetype }) => {
+    const representative = system.pages.find((page) => page.id === archetype.representativePageId);
+    const htmlPath = path.join(temp, representative.html);
+    const html = await fs.readFile(htmlPath, 'utf8');
+    await fs.writeFile(
+      htmlPath,
+      html.replace('</body>', `
+        <script src="../assets/www.googletagmanager.com/gtag.js"></script>
+        <img src="../assets/app.citeme.io/api/beacon/demo/pixel" width="1" height="1" style="position:absolute;width:0;height:0;overflow:hidden">
+        <img src="assets/hero.jpg" width="800" height="600" alt="Hero">
+      </body>`),
+      'utf8',
+    );
+
+    const source = await resolveArchetypeSource({ domainDir: temp, archetypeId: archetype.id });
+    assert.ok(source.assetRefs.includes('assets/hero.jpg'));
+    assert.equal(source.assetRefs.some((ref) => /googletagmanager|citeme\.io/i.test(ref)), false);
+  });
+});
+
 test('resolver rejects malformed archetype ids before filesystem interpolation', async () => {
   await withCompiledFixture(async ({ temp }) => {
     await assert.rejects(
