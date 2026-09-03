@@ -2,7 +2,7 @@ import * as cheerio from 'cheerio';
 
 const FRAMEWORK_PAYLOAD = /self\.__next_f|__NEXT_DATA__|__NUXT__|webpackChunk|vite\/client/i;
 const NEXT_IMAGE_OPTIMIZER = /(?:^|,\s*)\/_next\/image\?/i;
-const TRACKING = /googletagmanager|google-analytics|facebook\.net|posthog|segment\.com|citeme\.io|visitors\.now|clarity\.ms|hotjar|plausible\.io/i;
+const TRACKING = /googletagmanager|google-analytics|facebook\.(?:net|com)|posthog|segment\.com|citeme\.io|visitors\.now|clarity\.ms|hotjar|plausible\.io/i;
 const NON_FUNCTIONAL_LINK_REL = new Set(['preload', 'modulepreload', 'prefetch', 'icon', 'apple-touch-icon']);
 
 function isHiddenPixel(node) {
