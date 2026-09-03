@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Aspirator — Site System Explorer</title>
+  <link rel="stylesheet" href="/studio/explorer.css">
+</head>
+<body>
+  <main class="system-app">
+    <header class="system-header">
+      <div class="system-brand"><span class="brand-mark">A*</span><div><strong>ASPIRATOR</strong><small>SITE SYSTEM EXPLORER</small></div></div>
+      <form id="domain-form" class="domain-form">
+        <input id="domain-input" autocomplete="off" spellcheck="false" placeholder="www.brandappart.com">
+        <button type="submit">Charger</button>
+        <button id="compile-btn" type="button" class="ghost">Compiler</button>
+      </form>
+      <div id="system-stats" class="system-stats">Aucun système chargé</div>
+    </header>
+
+    <section class="workspace">
+      <aside class="tree-panel">
+        <div class="panel-title"><span>01</span><strong>SYSTEM TREE</strong></div>
+        <div id="system-tree" class="system-tree"><p class="empty">Charge un domaine compilé.</p></div>
+      </aside>
+
+      <section class="preview-panel">
+        <div class="preview-toolbar">
+          <div id="preview-title"><strong>Preview</strong><small>—</small></div>
+          <div class="viewport-switcher" id="viewport-switcher">
+            <button data-width="1440" class="active">1440</button>
+            <button data-width="1024">1024</button>
+            <button data-width="768">768</button>
+            <button data-width="390">390</button>
+          </div>
+        </div>
+        <div id="preview-stage" class="preview-stage">
+          <div id="preview-device" class="preview-device">
+            <iframe id="preview-frame" title="Aspirator preview" sandbox="allow-scripts allow-forms allow-modals"></iframe>
+          </div>
+        </div>
+      </section>
+
+      <aside class="inspector-panel">
+        <div class="panel-title"><span>03</span><strong>INSPECTOR</strong></div>
+        <div id="system-inspector"><p class="empty">Sélectionne une page, un archétype ou un composant.</p></div>
+      </aside>
+    </section>
+
+    <footer class="statusbar"><span id="status-text">READY</span><span>Pages · Archetypes · Components · Assets · Motion</span></footer>
+  </main>
+  <script type="module" src="/studio/explorer.js"></script>
+</body>
+</html>

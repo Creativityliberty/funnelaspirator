@@ -4,50 +4,43 @@ console.log('🧪 Starting MCP Streamable HTTP Integration Test against running 
 
 const PORT = process.env.PORT || 3000;
 
-const postRequest = (path, payload, headers = {}) => {
-  return new Promise((resolve, reject) => {
-    const reqOptions = {
-      hostname: 'localhost',
-      port: PORT,
-      path: path,
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Content-Length': Buffer.byteLength(payload),
-        'Accept': 'application/json, text/event-stream',
-        ...headers
-      }
-    };
+const postRequest = (path, payload, headers = {}) => new Promise((resolve, reject) => {
+  const reqOptions = {
+    hostname: 'localhost',
+    port: PORT,
+    path,
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Content-Length': Buffer.byteLength(payload),
+      Accept: 'application/json, text/event-stream',
+      ...headers,
+    },
+  };
 
-    const req = http.request(reqOptions, (res) => {
-      let data = '';
-      res.on('data', (chunk) => { data += chunk; });
-      res.on('end', () => {
-        let parsedBody = null;
-        if (data) {
-          if (data.includes('event: message')) {
-            const match = data.match(/data:\s*([^\n]+)/);
-            parsedBody = match ? JSON.parse(match[1]) : null;
-          } else {
-            parsedBody = JSON.parse(data);
-          }
+  const req = http.request(reqOptions, (res) => {
+    let data = '';
+    res.on('data', (chunk) => { data += chunk; });
+    res.on('end', () => {
+      let parsedBody = null;
+      if (data) {
+        if (data.includes('event: message')) {
+          const match = data.match(/data:\s*([^\n]+)/);
+          parsedBody = match ? JSON.parse(match[1]) : null;
+        } else {
+          parsedBody = JSON.parse(data);
         }
-        resolve({
-          statusCode: res.statusCode,
-          headers: res.headers,
-          body: parsedBody
-        });
-      });
+      }
+      resolve({ statusCode: res.statusCode, headers: res.headers, body: parsedBody });
     });
-
-    req.on('error', (err) => { reject(err); });
-    req.write(payload);
-    req.end();
   });
-};
+
+  req.on('error', reject);
+  req.write(payload);
+  req.end();
+});
 
 try {
-  // Step 1: Send initialize request
   console.log('Step 1: Sending initialize request...');
   const initPayload = JSON.stringify({
     jsonrpc: '2.0',
@@ -55,117 +48,92 @@ try {
     params: {
       protocolVersion: '2024-11-05',
       capabilities: {},
-      clientInfo: {
-        name: 'test-client',
-        version: '1.0.0'
-      }
+      clientInfo: { name: 'test-client', version: '1.0.0' },
     },
-    id: 1
+    id: 1,
   });
 
   const initResponse = await postRequest('/mcp', initPayload);
   console.log(`Init Response Status: ${initResponse.statusCode}`);
-  console.log('Init Response Headers:', initResponse.headers);
-  console.log('Init Response Body:', JSON.stringify(initResponse.body, null, 2));
 
   const sessionId = initResponse.headers['mcp-session-id'];
-  if (!sessionId) {
-    throw new Error('No mcp-session-id returned in initialization response headers.');
-  }
+  if (!sessionId) throw new Error('No mcp-session-id returned in initialization response headers.');
 
-  // Step 2: Send tools/list request
-  console.log(`\nStep 2: Sending tools/list request with session ID: ${sessionId}...`);
-  const toolsPayload = JSON.stringify({
-    jsonrpc: '2.0',
-    method: 'tools/list',
-    id: 2
-  });
-
-  const toolsResponse = await postRequest('/mcp', toolsPayload, {
-    'mcp-session-id': sessionId
-  });
-
-  console.log(`Tools Response Status: ${toolsResponse.statusCode}`);
-  console.log('Tools Response Body:', JSON.stringify(toolsResponse.body, null, 2));
+  console.log(`Step 2: Sending tools/list request with session ID: ${sessionId}...`);
+  const toolsResponse = await postRequest('/mcp', JSON.stringify({
+    jsonrpc: '2.0', method: 'tools/list', id: 2,
+  }), { 'mcp-session-id': sessionId });
 
   if (toolsResponse.statusCode !== 200) {
     throw new Error(`Expected status code 200, got ${toolsResponse.statusCode}`);
   }
 
-  const tools = toolsResponse.body.result.tools;
-  if (!tools || tools.length !== 9) {
-    throw new Error(`Expected 9 tools, got ${tools ? tools.length : 0}`);
+  const tools = toolsResponse.body?.result?.tools || [];
+  const expectedToolNames = [
+    'crawl_funnel',
+    'list_crawled_domains',
+    'get_crawl_details',
+    'get_crawled_file',
+    'get_funnel_design_system',
+    'get_funnel_motion_specs',
+    'get_funnel_components',
+    'get_funnel_micro_interactions',
+    'parse_json_to_specs_md',
+    'compile_site_system',
+    'get_site_system',
+    'list_site_pages',
+    'get_site_page',
+    'list_archetypes',
+    'get_archetype',
+    'list_components',
+    'get_component',
+  ];
+  const toolMap = new Map(tools.map((tool) => [tool.name, tool]));
+  const missing = expectedToolNames.filter((name) => !toolMap.has(name));
+  if (missing.length) throw new Error(`Missing expected MCP tools: ${missing.join(', ')}`);
+  if (tools.length < expectedToolNames.length) {
+    throw new Error(`Expected at least ${expectedToolNames.length} tools, got ${tools.length}`);
   }
 
-  const crawlFunnel = tools.find(t => t.name === 'crawl_funnel');
-  const listCrawled = tools.find(t => t.name === 'list_crawled_domains');
-  const getCrawl = tools.find(t => t.name === 'get_crawl_details');
-  const getCrawledFile = tools.find(t => t.name === 'get_crawled_file');
-  const getDesignSystem = tools.find(t => t.name === 'get_funnel_design_system');
-  const getMotionSpecs = tools.find(t => t.name === 'get_funnel_motion_specs');
-  const getComponents = tools.find(t => t.name === 'get_funnel_components');
-  const getMicroInteractions = tools.find(t => t.name === 'get_funnel_micro_interactions');
-  const parseJsonToSpecs = tools.find(t => t.name === 'parse_json_to_specs_md');
+  const crawlFunnel = toolMap.get('crawl_funnel');
+  const listCrawled = toolMap.get('list_crawled_domains');
+  const getCrawl = toolMap.get('get_crawl_details');
+  const getCrawledFile = toolMap.get('get_crawled_file');
+  const compileSiteSystem = toolMap.get('compile_site_system');
+  const listArchetypes = toolMap.get('list_archetypes');
 
-  if (!crawlFunnel || !listCrawled || !getCrawl || !getCrawledFile || !getDesignSystem || !getMotionSpecs || !getComponents || !getMicroInteractions || !parseJsonToSpecs) {
-    throw new Error('Could not find all 9 expected tools by name.');
-  }
-
-  // Assert annotations
   console.log('Checking annotations...');
   if (
-    crawlFunnel.annotations?.readOnlyHint !== false ||
-    crawlFunnel.annotations?.openWorldHint !== true ||
-    crawlFunnel.annotations?.destructiveHint !== false
-  ) {
-    throw new Error('crawl_funnel annotations incorrect');
-  }
+    crawlFunnel.annotations?.readOnlyHint !== false
+    || crawlFunnel.annotations?.openWorldHint !== true
+    || crawlFunnel.annotations?.destructiveHint !== false
+  ) throw new Error('crawl_funnel annotations incorrect');
+  if (listCrawled.annotations?.readOnlyHint !== true) throw new Error('list_crawled_domains annotations incorrect');
+  if (getCrawl.annotations?.readOnlyHint !== true) throw new Error('get_crawl_details annotations incorrect');
+  if (getCrawledFile.annotations?.readOnlyHint !== true) throw new Error('get_crawled_file annotations incorrect');
+  if (compileSiteSystem.annotations?.readOnlyHint !== false) throw new Error('compile_site_system annotations incorrect');
+  if (listArchetypes.annotations?.readOnlyHint !== true) throw new Error('list_archetypes annotations incorrect');
 
-  if (listCrawled.annotations?.readOnlyHint !== true) {
-    throw new Error('list_crawled_domains annotations incorrect');
-  }
-
-  if (getCrawl.annotations?.readOnlyHint !== true) {
-    throw new Error('get_crawl_details annotations incorrect');
-  }
-
-  if (getCrawledFile.annotations?.readOnlyHint !== true) {
-    throw new Error('get_crawled_file annotations incorrect');
-  }
-
-  // Step 3: Send tools/call for get_crawled_file (expect error or not found, but it should return clean JSON error instead of crashing)
-  console.log(`\nStep 3: Sending tools/call for get_crawled_file (expecting not found error)...`);
-  const callPayload = JSON.stringify({
+  console.log('Step 3: Verifying get_crawled_file error behavior...');
+  const callResponse = await postRequest('/mcp', JSON.stringify({
     jsonrpc: '2.0',
     method: 'tools/call',
     params: {
       name: 'get_crawled_file',
-      arguments: {
-        domain: 'nonexistent.com',
-        filePath: 'pages/index.html'
-      }
+      arguments: { domain: 'nonexistent.com', filePath: 'pages/index.html' },
     },
-    id: 3
-  });
-
-  const callResponse = await postRequest('/mcp', callPayload, {
-    'mcp-session-id': sessionId
-  });
-
-  console.log(`Call Response Status: ${callResponse.statusCode}`);
-  console.log('Call Response Body:', JSON.stringify(callResponse.body, null, 2));
+    id: 3,
+  }), { 'mcp-session-id': sessionId });
 
   if (callResponse.statusCode !== 200) {
     throw new Error(`Expected call response status code 200, got ${callResponse.statusCode}`);
   }
-
-  if (!callResponse.body.result?.isError) {
+  if (!callResponse.body?.result?.isError) {
     throw new Error('Expected call response to indicate an error for nonexistent file.');
   }
 
-  console.log('✅ MCP streamable endpoint, tool annotations, and get_crawled_file error behavior verified successfully!');
+  console.log(`✅ MCP integration verified: ${expectedToolNames.length} required legacy + M01 tools present.`);
   process.exit(0);
-
 } catch (error) {
   console.error('❌ Test failed:', error);
   process.exit(1);
