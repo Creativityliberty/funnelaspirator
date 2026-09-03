@@ -5,7 +5,7 @@ import * as cheerio from 'cheerio';
 import { assertInsideRoot } from '../compiler/schema.mjs';
 
 const EXTERNAL = /^(?:https?:|data:|blob:|mailto:|tel:|javascript:|\/\/|#)/i;
-const TRACKING = /googletagmanager|google-analytics|facebook\.net|posthog|self\.__next_f|__NEXT_DATA__/i;
+const TRACKING = /googletagmanager|google-analytics|facebook\.(?:net|com)|posthog|segment\.com|citeme\.io|visitors\.now|clarity\.ms|hotjar|plausible\.io|self\.__next_f|__NEXT_DATA__/i;
 const FONT_EXT = /\.(?:woff2?|ttf|otf)(?:$|[?#])/i;
 
 async function exists(file) {
@@ -156,7 +156,7 @@ export async function verifyRebuild({ domainDir, rebuildRoot, manifest = {}, sou
 
   let trackingFound = false;
   for (const relative of manifest.generatedFiles || []) {
-    if (!/\.(?:html|js|mjs)$/i.test(relative)) continue;
+    if (!/\.(?:html|js|mjs|json)$/i.test(relative)) continue;
     const file = path.join(root, relative);
     if (!(await exists(file))) continue;
     if (TRACKING.test(await fs.readFile(file, 'utf8'))) {
