@@ -1,5 +1,7 @@
 import { compileSiteSystem } from './compiler/compile-site.mjs';
 import { readCompiledSystem, resolveDomainDir, findById } from './compiler/system-store.mjs';
+import { rebuildArchetype } from './rebuild/rebuild-archetype.mjs';
+import { readRebuildManifest, readRebuildReport } from './rebuild/rebuild-store.mjs';
 
 function payload(value) {
   return {
@@ -14,6 +16,7 @@ function failure(error) {
 
 export function registerSystemTools(mcpServer, { exportsDir, z }) {
   const domainSchema = z.object({ domain: z.string() });
+  const rebuildSchema = z.object({ domain: z.string(), archetypeId: z.string() });
 
   const registerEntity = (name, key, listKey, label) => {
     mcpServer.registerTool(
@@ -86,4 +89,62 @@ export function registerSystemTools(mcpServer, { exportsDir, z }) {
   registerEntity('get_site_page', 'pageId', 'pages', 'page');
   registerEntity('get_archetype', 'archetypeId', 'archetypes', 'archetype');
   registerEntity('get_component', 'componentId', 'components', 'component');
+
+  mcpServer.registerTool(
+    'rebuild_archetype',
+    {
+      description: 'Rebuild one compiled archetype into a verified autonomous vanilla HTML/CSS/JS runtime.',
+      inputSchema: rebuildSchema,
+      annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false },
+    },
+    async ({ domain, archetypeId }) => {
+      try {
+        const domainDir = resolveDomainDir(exportsDir, domain);
+        const manifest = await rebuildArchetype({ domainDir, archetypeId });
+        return payload({ success: true, domain, manifest });
+      } catch (error) {
+        return failure(error);
+      }
+    },
+  );
+
+  mcpServer.registerTool(
+    'get_rebuild_manifest',
+    {
+      description: 'Get the published rebuild manifest for one archetype.',
+      inputSchema: rebuildSchema,
+      annotations: { readOnlyHint: true, openWorldHint: false },
+    },
+    async ({ domain, archetypeId }) => {
+      try {
+        return payload({
+          success: true,
+          domain,
+          manifest: await readRebuildManifest(exportsDir, domain, archetypeId),
+        });
+      } catch (error) {
+        return failure(error);
+      }
+    },
+  );
+
+  mcpServer.registerTool(
+    'get_rebuild_report',
+    {
+      description: 'Get the fidelity verification report for one published archetype rebuild.',
+      inputSchema: rebuildSchema,
+      annotations: { readOnlyHint: true, openWorldHint: false },
+    },
+    async ({ domain, archetypeId }) => {
+      try {
+        return payload({
+          success: true,
+          domain,
+          report: await readRebuildReport(exportsDir, domain, archetypeId),
+        });
+      } catch (error) {
+        return failure(error);
+      }
+    },
+  );
 }
