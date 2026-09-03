@@ -1,0 +1,1 @@
+M01 Brand Appart calibration switches the public compiler module paths to the HTML-aware v2 implementations after validation.
