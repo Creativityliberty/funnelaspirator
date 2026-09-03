@@ -42,11 +42,19 @@ function applyAssetMap(html, assetMap = {}) {
   return output;
 }
 
+function injectBridge(html) {
+  const bridge = `<script data-aspirator-bridge>document.addEventListener('click',function(event){var link=event.target.closest('[data-aspirator-route]');if(!link)return;event.preventDefault();parent.postMessage({type:'aspirator:navigate',route:link.getAttribute('data-aspirator-route')},'*');});<\/script>`;
+  return /<\/body>/i.test(html)
+    ? html.replace(/<\/body>/i, `${bridge}</body>`)
+    : html + bridge;
+}
+
 export function normalizePreviewHtml({ html = '', domain = '', assetMap = {} } = {}) {
   let output = String(html || '');
   output = stripTrackingScripts(output);
   output = stripBrokenNextSrcsets(output);
   output = applyAssetMap(output, assetMap);
   output = sandboxSameDomainLinks(output, domain);
+  output = injectBridge(output);
   return output;
 }
