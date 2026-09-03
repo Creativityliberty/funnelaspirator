@@ -1,10 +1,11 @@
 import * as cheerio from 'cheerio';
 
 const FRAMEWORK_PAYLOAD = /self\.__next_f|__NEXT_DATA__|__NUXT__|webpackChunk|vite\/client/i;
+const NEXT_IMAGE_OPTIMIZER = /(?:^|,\s*)\/_next\/image\?/i;
 
 export function cleanRebuildDocument({ html = '' } = {}) {
   const $ = cheerio.load(html);
-  const removed = { scripts: 0, preloads: 0, trackers: 0, formsNeutralized: 0 };
+  const removed = { scripts: 0, preloads: 0, trackers: 0, formsNeutralized: 0, srcsets: 0 };
 
   $('script').each((_i, element) => {
     const node = $(element);
@@ -20,6 +21,15 @@ export function cleanRebuildDocument({ html = '' } = {}) {
     if (tracking) removed.trackers += 1;
     removed.scripts += 1;
     node.remove();
+  });
+
+  $('[srcset]').each((_i, element) => {
+    const node = $(element);
+    const srcset = node.attr('srcset') || '';
+    if (!NEXT_IMAGE_OPTIMIZER.test(srcset)) return;
+    node.removeAttr('srcset');
+    removed.srcsets += 1;
+    if (String(element.tagName || '').toLowerCase() === 'source' && !node.attr('src')) node.remove();
   });
 
   const seenPreloads = new Set();
