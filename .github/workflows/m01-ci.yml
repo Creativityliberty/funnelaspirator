@@ -1,0 +1,53 @@
+name: M01 Site System Compiler
+
+on:
+  push:
+    branches:
+      - feat/m01-site-system-compiler
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Syntax check
+        run: |
+          node --check src/server.mjs
+          node --check src/server-core.mjs
+          node --check src/compiler/compile-site.mjs
+          node --check src/compiler/html-components.mjs
+          node --check src/system-http.mjs
+          node --check src/system-mcp.mjs
+          node --check public/studio/explorer.js
+
+      - name: Unit and contract tests
+        run: npm test
+
+      - name: Server smoke test
+        run: |
+          npm run dev > /tmp/aspirator-server.log 2>&1 &
+          SERVER_PID=$!
+          trap 'kill $SERVER_PID 2>/dev/null || true' EXIT
+          for attempt in {1..20}; do
+            if curl --fail --silent http://127.0.0.1:3000/ > /dev/null; then
+              exit 0
+            fi
+            sleep 1
+          done
+          cat /tmp/aspirator-server.log
+          exit 1
