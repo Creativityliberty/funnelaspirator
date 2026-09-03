@@ -30,6 +30,7 @@ test('compileSiteSystem writes manifests and normalized previews without mutatin
   const after = await fs.readFile(sourcePath, 'utf8');
   assert.equal(preview.includes('/_next/image?'), false);
   assert.equal(preview.includes('googletagmanager'), false);
+  assert.equal(preview.includes('<base href="/exports/example.test/pages/">'), true);
   assert.equal(after, before);
   await fs.access(path.join(temp, 'system', 'site-system.json'));
 });
