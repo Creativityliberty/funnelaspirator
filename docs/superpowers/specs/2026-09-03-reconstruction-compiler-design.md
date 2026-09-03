@@ -2,26 +2,65 @@
 
 ## Goal
 
-M02 turns the compiled site model introduced in M01 into clean, autonomous, inspectable HTML/CSS/JS output.
+M02 turns the M01 compiled site model into clean, autonomous, inspectable HTML/CSS/JS output.
 
-The milestone answers one question only:
+It answers one question only:
 
-> Can Funnel Aspirator reconstruct a captured page archetype as clean code while preserving its structure, styling dependencies, assets, and observable behavior closely enough to serve as a trustworthy editable starting point?
+> Can Funnel Aspirator reconstruct a captured page archetype as editable code while preserving its structure, styling dependencies, assets, and observable behavior closely enough to serve as a trustworthy reconstruction baseline?
 
 M02 is deterministic. It does not redesign the site, rewrite copy with AI, generate React/Next/WordPress, or publish anything.
 
 ## Starting point
 
-M01 already produces `exports/{domain}/system/site-system.json` with:
+M01 already produces `exports/{domain}/system/site-system.json` containing pages, archetypes, component families, assets, design tokens, motion metadata and normalized original previews.
 
-- pages and representative previews;
-- archetypes and representative page ids;
-- cross-page component registry;
-- asset registry;
-- design-system tokens;
-- per-page motion metadata.
+M02 consumes those artifacts and the original captured HTML/CSS/assets. It never re-runs crawling and never mutates original crawl evidence.
 
-M02 consumes this compiled model. It must not re-run crawling or alter original crawl evidence.
+## M01 compatibility prerequisites
+
+Self-review of the current M01 model found two metadata gaps that M02 must close before slicing components reliably:
+
+1. public page records expose `html` and `screenshot` but not the source `data/*.json` path;
+2. component occurrences expose role/tag/classes/index but not a stable DOM locator.
+
+M02 therefore introduces a backward-compatible site-system schema extension:
+
+```json
+{
+  "version": "1.1",
+  "pages": [
+    {
+      "id": "page-001",
+      "html": "pages/index.html",
+      "data": "data/index.json"
+    }
+  ],
+  "components": [
+    {
+      "id": "cmp-project-hero",
+      "occurrences": [
+        {
+          "pageId": "page-001",
+          "locator": {
+            "strategy": "id|selector-ordinal|structural",
+            "selector": "#project-hero",
+            "ordinal": 0,
+            "fingerprint": "stable-hash"
+          }
+        }
+      ]
+    }
+  ]
+}
+```
+
+Locator priority is deterministic:
+
+1. unique source id;
+2. stable tag + normalized classes + ordinal among matching siblings;
+3. structural fingerprint fallback.
+
+`compileSiteSystem()` may emit v1.1 after M02 is introduced. The reconstruction compiler must still accept M01 v1.0 manifests by deriving missing `data` and locator metadata from original crawl artifacts when possible. No existing M01 HTTP/MCP contract is removed.
 
 ## Primary workflow
 
@@ -32,9 +71,9 @@ site-system.json
 select archetype
       │
       ├── representative page
-      ├── component occurrences
-      ├── source HTML
-      ├── captured styles/assets
+      ├── component occurrences + locators
+      ├── source HTML + page data
+      ├── captured CSS/assets
       ├── design tokens
       └── motion metadata
       │
@@ -46,48 +85,45 @@ RECONSTRUCTION COMPILER
       ├── Component Slicer
       ├── CSS Dependency Compiler
       ├── Asset/Data Binder
-      ├── Runtime Builder
+      ├── Vanilla Runtime Builder
       └── Fidelity Verifier
       │
       ▼
 exports/{domain}/rebuild/{archetypeId}/
 ```
 
-The first certification target is the Brand Appart `Project Detail` archetype. Home is the second target after the project-detail family is stable.
+The first certification target is Brand Appart `Project Detail`. Home is the second target after that family is stable.
 
-## Scope boundary
+## Scope
 
-### M02 includes
+### Included
 
 - reconstruction by archetype;
-- reconstruction of the representative page first;
-- clean standalone HTML/CSS/JS output;
-- componentized runtime generated from the M01 component registry;
-- CSS and asset dependency resolution;
-- page data extraction for repeated content;
-- local navigation between rebuilt pages when more than one page in the archetype is generated;
+- representative-page reconstruction first;
+- standalone HTML/CSS/JS served by Aspirator with no source framework runtime;
+- generated component boundaries tied to M01 component ids;
+- CSS and local asset dependency resolution;
+- safe extraction of page-specific content into data;
+- reuse of one archetype runtime by compatible pages;
 - deterministic rebuild manifest;
-- structural and resource integrity verification;
-- Explorer controls for Build / Original / Rebuilt preview.
+- structural/resource integrity report;
+- Explorer controls for Original / Build / Rebuilt;
+- HTTP and MCP reconstruction access.
 
-### M02 excludes
+### Excluded
 
 - AI redesign or copy rewriting;
-- visual identity replacement;
-- React, Next.js, Vue, Svelte, WordPress or Web Components export targets;
+- identity replacement;
+- React, Next.js, Vue, Svelte, WordPress or Web Components targets;
 - drag-and-drop editing;
 - automated publishing;
-- screenshot-driven code generation as the primary reconstruction method;
-- claiming pixel-perfect visual fidelity without evidence.
-
-Those belong to later milestones.
+- screenshot-to-code as the primary reconstruction mechanism;
+- claiming pixel-perfect fidelity without measured evidence.
 
 ## Output contract
 
-For an archetype `arch-project-detail`, M02 writes:
-
 ```text
-exports/{domain}/rebuild/arch-project-detail/
+exports/{domain}/rebuild/{archetypeId}/
 ├── rebuild-manifest.json
 ├── index.html
 ├── app.js
@@ -101,26 +137,22 @@ exports/{domain}/rebuild/arch-project-detail/
 │   └── *.js
 ├── data/
 │   ├── archetype.json
-│   └── pages/
-│       └── *.json
+│   └── pages/*.json
 ├── assets/
-│   └── ...
 └── reports/
     └── fidelity.json
 ```
 
-The original `exports/{domain}/pages`, `data`, `assets`, `screenshots`, and `system` directories remain unchanged.
+Original `pages/`, `data/`, `assets/`, `screenshots/` and `system/` remain untouched.
 
-## Rebuild manifest
-
-`rebuild-manifest.json` is the canonical description of the generated output.
+`rebuild-manifest.json` is canonical:
 
 ```json
 {
   "version": "1.0",
   "domain": "www.brandappart.com",
   "archetypeId": "arch-project-detail",
-  "representativePageId": "page-project-example",
+  "representativePageId": "page-001",
   "target": "vanilla",
   "generatedFiles": [],
   "componentIds": [],
@@ -134,140 +166,94 @@ The original `exports/{domain}/pages`, `data`, `assets`, `screenshots`, and `sys
 }
 ```
 
-Generated ids must reference M01 ids wherever possible rather than inventing parallel identity systems.
+Generated identities reuse M01 ids wherever possible.
 
 ## Reconstruction units
 
 ### 1. Source Resolver
 
-Resolves all source material required by the selected archetype:
+Resolves representative HTML, page data, component occurrences, stylesheets, local assets, tokens and relevant motion.
 
-- representative page HTML;
-- M01 page metadata;
-- component occurrences on that page;
-- CSS files referenced by the source page;
-- captured same-domain assets;
-- design-system tokens;
-- relevant motion data.
-
-Every resolved filesystem path must remain inside `exports/{domain}`.
-
-Failure to resolve optional motion data is non-fatal. Failure to resolve the representative source HTML is fatal.
+All filesystem paths must remain inside `exports/{domain}`. Missing optional motion is non-fatal. Missing representative HTML is fatal.
 
 ### 2. DOM Cleaner
 
-Produces a reconstruction DOM without mutating the source page.
+Builds a reconstruction DOM without modifying source HTML.
 
-It removes or normalizes:
+It removes or normalizes tracking, analytics, unnecessary hydration payloads, duplicate preload hints, framework-only runtime markers and unsafe captured navigation behavior.
 
-- analytics and tracking scripts;
-- framework hydration payloads that are unnecessary for the rebuilt runtime;
-- duplicate preload hints;
-- captured development/runtime markers;
-- unsafe external navigation behavior;
-- attributes that only serve the source framework runtime.
+It preserves semantic elements, accessibility attributes, style-relevant classes/ids, inline SVG, CSS-referenced data attributes and unknown attributes unless a rule proves they are unsafe or framework-only.
 
-It preserves by default:
-
-- semantic elements;
-- accessibility attributes;
-- classes and ids needed by extracted CSS;
-- inline SVG;
-- forms as inert/local unless explicitly supported;
-- data attributes if referenced by CSS or retained interaction code.
-
-The cleaner is conservative: unknown attributes are preserved unless a rule proves they are framework-only or unsafe.
+Forms are inert/local by default and never submit to captured production endpoints.
 
 ### 3. Component Slicer
 
-Uses the M01 component registry plus the representative DOM to create reconstruction component boundaries.
+Locates representative-page occurrences using M01 locators and extracts markup for reusable reconstruction units.
 
-A component is generated only when Aspirator can locate its occurrence reliably in the source DOM.
-
-Each generated component record contains:
+Each generated component record carries:
 
 - M01 component id;
 - semantic role;
-- source selector/signature;
+- source locator/fingerprint;
+- variant id when known;
 - extracted markup;
-- variant id where known;
-- required asset ids;
-- required style dependencies;
+- required assets/styles;
 - page usage metadata.
 
-M02 does not force every DOM node into a component. Unclassified residual markup remains in the page shell rather than being guessed into a fake component hierarchy.
+If a component cannot be located confidently, it is reported as unresolved or left as residual page-shell markup. M02 never invents a component boundary merely to satisfy a target count.
 
 ### 4. CSS Dependency Compiler
 
-The CSS compiler aims for minimum safe CSS, not theoretical perfect tree-shaking.
+The CSS compiler optimizes for minimum safe CSS, not aggressive tree-shaking.
 
-Priority order:
+It:
 
-1. collect all stylesheets used by the representative page;
-2. preserve CSS variables, font declarations, keyframes and global reset/base rules;
-3. retain rules matching generated component markup and page-shell markup;
-4. include referenced pseudo states, media queries and keyframes;
-5. rewrite `url(...)` resources to rebuilt local asset paths;
-6. deduplicate identical rules where safe;
-7. write deterministic output order.
+1. gathers stylesheets used by the representative page;
+2. preserves variables, reset/base rules, font declarations, media queries and keyframes;
+3. retains rules matching generated components or residual shell markup;
+4. retains referenced pseudo states and animation dependencies;
+5. rewrites `url(...)` references to rebuild-local assets;
+6. deduplicates only when safe;
+7. writes deterministic output order.
 
-If exact dependency pruning cannot be proven safe, the compiler keeps the relevant captured stylesheet rather than dropping a potentially required rule.
+When pruning safety cannot be proven, it keeps the relevant captured stylesheet rather than risk visual breakage.
 
-No font files are generated or redistributed by the compiler. Existing captured font references may be represented in metadata, but runtime packaging must respect source availability/licensing and may fall back when the asset is not locally available.
+M02 does not generate or redistribute font binaries. Font references may be retained in metadata/style output only when available and appropriate; otherwise the rebuild reports the missing dependency or falls back.
 
-### 5. Asset and Data Binder
+### 5. Asset/Data Binder
 
-Assets are copied only when referenced by the rebuilt archetype or its generated page data.
+Copies only locally captured assets referenced by the rebuilt archetype/runtime.
 
-The binder:
+It rewrites image/video/SVG/CSS/source-set references, records unresolved resources, and never fetches new network assets during deterministic reconstruction.
 
-- maps M01 asset ids/paths to rebuild-local paths;
-- rewrites image, video, SVG, CSS and source-set references;
-- preserves external embeds only when explicitly allowed;
-- records unresolved resources in `fidelity.json`;
-- never fetches new network assets during deterministic reconstruction.
+Content differences across compatible archetype pages may be moved into page JSON when safely identifiable: headings, copy, media references, project metadata, CTA labels/links and gallery items.
 
-Content that differs across pages of one archetype is moved into page data when it can be identified safely, for example:
-
-- headings and body copy;
-- image/video references;
-- project metadata;
-- CTA labels/links;
-- gallery items.
-
-If extraction is ambiguous, the representative page keeps literal markup rather than inventing a data model.
+Ambiguous content remains literal markup rather than forcing a guessed schema.
 
 ### 6. Vanilla Runtime Builder
 
-M02 generates an ES-module browser runtime with no build step required.
+Generates ES modules requiring no build step.
 
-The runtime responsibilities are limited to:
+Responsibilities are limited to component composition, page-data binding, supported interactions, local selection/navigation among generated archetype pages, and Explorer preview messaging.
 
-- composing generated components;
-- binding selected page data;
-- restoring supported interactions;
-- local route/page selection for generated archetype members;
-- sending preview navigation events back to Aspirator Explorer when embedded.
-
-The runtime must work when served by the existing Aspirator Express server. Direct `file://` execution is not a certification requirement because ES modules and browser security rules make it unreliable across browsers.
+Certification requires serving through Aspirator Express. `file://` execution is not required because browser module/security behavior varies.
 
 ### 7. Fidelity Verifier
 
-M02 verification distinguishes what can be proven structurally from visual similarity.
+M02 proves structural/resource integrity separately from visual similarity.
 
-Required deterministic checks:
+Required checks:
 
-- generated entry file exists;
+- entry files exist and parse;
 - all local HTML/CSS/JS references resolve;
-- all referenced copied assets exist;
-- expected M01 components are represented or explicitly marked residual/unresolved;
-- no generated path escapes the rebuild root;
-- no source crawl artifact changed;
-- rebuilt document parses successfully;
-- no prohibited tracking scripts remain;
-- internal rebuilt navigation resolves.
+- referenced copied assets exist;
+- expected M01 components are resolved or explicitly residual/unresolved;
+- generated paths stay inside rebuild root;
+- original crawl/system evidence is unchanged;
+- prohibited tracking is absent;
+- rebuilt internal navigation resolves.
 
-The report contains:
+Example report:
 
 ```json
 {
@@ -292,49 +278,29 @@ The report contains:
 }
 ```
 
-M02 may capture original and rebuilt screenshots for human comparison, but automated pixel/visual scoring is reserved for M06 unless a small prerequisite metric is required to debug M02.
+M02 may capture original/rebuilt screenshots for human inspection. Automated visual scoring remains M06 unless a minimal diagnostic metric becomes necessary to debug reconstruction.
 
 ## Archetype-first behavior
 
-M02 reconstructs the representative page first, then applies the resulting structure to other pages in the same archetype only when their component sequence is compatible.
+M02 reconstructs the representative page first, then reuses that runtime for other pages only when their component sequence and required dependencies are compatible.
 
-A page may be excluded from batch generation when:
-
-- its structural signature diverges beyond the archetype tolerance;
-- a required component occurrence cannot be located;
-- essential source HTML/assets are missing.
-
-Exclusion is reported, not silently coerced.
-
-This prevents one anomalous page from corrupting the reusable archetype runtime.
+A page is excluded from batch generation when structure diverges materially, a required component cannot be located, or essential source evidence is missing. Exclusion is explicit in the report; Aspirator never silently coerces an anomalous page into the template.
 
 ## Explorer integration
 
-The existing M01 Explorer gains a reconstruction mode without replacing original preview.
-
-For an archetype or page the UI exposes:
+The M01 Explorer gains:
 
 ```text
 [ Original Preview ]  [ Build ]  [ Rebuilt Preview ]
 ```
 
-The inspector shows:
+Inspector fields include build status, output path, resolved component count, referenced/resolved assets, unresolved dependencies, fidelity report and rebuild version.
 
-- reconstruction status;
-- generated output path;
-- resolved component count;
-- referenced/resolved asset count;
-- unresolved dependencies;
-- fidelity report link;
-- rebuild timestamp/version.
-
-Original preview remains the evidence view. Rebuilt preview is always visually distinguished as generated output.
+Original Preview remains evidence. Rebuilt Preview is always labelled as generated output.
 
 ## HTTP surface
 
-M02 extends the existing `/api/results/:domain/system/...` namespace rather than creating conflicting legacy routes.
-
-Proposed endpoints:
+M02 stays inside the existing M01 namespace:
 
 ```text
 POST /api/results/:domain/system/rebuild/archetypes/:archetypeId
@@ -343,11 +309,11 @@ GET  /api/results/:domain/system/rebuild/archetypes/:archetypeId/preview
 GET  /api/results/:domain/system/rebuild/archetypes/:archetypeId/report
 ```
 
-A later bounded extension may add page-specific reconstruction if needed, but the M02 primary contract is archetype reconstruction.
+Page-specific reconstruction is not a primary M02 contract; it may be added later as a bounded extension if required.
 
 ## MCP surface
 
-M02 adds only the tools required for deterministic reconstruction:
+Only deterministic tools are added:
 
 ```text
 rebuild_archetype
@@ -355,88 +321,75 @@ get_rebuild_manifest
 get_rebuild_report
 ```
 
-No prompt-driven redesign or arbitrary code-generation tool is part of M02.
+No arbitrary prompt-driven code generation is part of M02.
 
-## Error handling
+## Error model
 
-Errors are classified as:
+- `SOURCE_MISSING`
+- `INVALID_ARCHETYPE`
+- `COMPONENT_UNRESOLVED`
+- `ASSET_UNRESOLVED`
+- `CSS_UNRESOLVED`
+- `OUTPUT_ESCAPE`
+- `VERIFY_FAILED`
 
-- `SOURCE_MISSING` — required crawl/system evidence unavailable;
-- `INVALID_ARCHETYPE` — unknown or unusable archetype id;
-- `COMPONENT_UNRESOLVED` — expected component cannot be located;
-- `ASSET_UNRESOLVED` — required asset cannot be mapped locally;
-- `CSS_UNRESOLVED` — required stylesheet/dependency cannot be resolved;
-- `OUTPUT_ESCAPE` — attempted path traversal outside rebuild root;
-- `VERIFY_FAILED` — generated output exists but fails integrity checks.
-
-Compilation writes to a staging directory and publishes the rebuild directory only after required generation steps complete. A failed run must not destroy the last known-good rebuild.
+Generation writes to a staging directory and atomically replaces the published rebuild only after required generation succeeds. A failed run cannot destroy the last known-good rebuild.
 
 ## Security and isolation
 
-- All source and output paths are constrained to the domain export root.
-- Rebuilt preview uses the existing sandbox strategy.
-- Tracking/analytics are stripped from rebuilt output.
-- External scripts are disabled by default unless explicitly allowlisted for a supported reconstruction case.
-- Forms do not submit to captured production endpoints by default.
-- Reconstruction never executes captured Node/server code.
-- Reconstruction never writes into source crawl directories.
+- source/output paths constrained to domain export root;
+- rebuilt preview sandboxed;
+- analytics/tracking removed;
+- external scripts disabled unless explicitly allowlisted;
+- captured forms cannot submit to production by default;
+- captured server/Node code is never executed;
+- source crawl directories are read-only from M02’s perspective.
 
 ## Determinism
 
-For identical source artifacts, M01 manifest, compiler version and options, M02 must generate the same logical output and stable manifests.
-
-Timestamps may exist in run metadata but must not participate in content identities or component/file naming.
+Identical source artifacts + site-system version + compiler version + options must produce the same logical output and stable identities. Timestamps may exist only as run metadata and never affect content naming/hashes.
 
 ## Testing strategy
 
-### Fast synthetic fixture
+### Fast fixture
 
-Extend the existing mini-site fixture with:
+Extend the mini-site with one reusable project-detail archetype, shared header/footer, project hero, gallery, CSS variables, media queries, keyframes, local images and one intentionally external resource.
 
-- one reusable project-detail archetype;
-- shared header/footer;
-- project hero;
-- gallery;
-- CSS variables/media queries/keyframes;
-- image references and one intentionally external resource.
+Each reconstruction unit receives focused tests.
 
-Unit/contract tests cover each reconstruction unit independently.
+### Brand Appart certification
 
-### Brand Appart certification fixture
+The real 40-page export remains an optional/manual long-running fixture, not the normal CI payload.
 
-Use the real captured Brand Appart export as a long-running/manual or optional integration fixture, not as the default lightweight CI payload.
+Certification requires:
 
-Certification checks:
+1. locate Project Detail archetype;
+2. rebuild representative page;
+3. generate framework-independent local HTML/CSS/JS;
+4. resolve all required captured resources or report exact misses;
+5. preserve M01 component identities;
+6. preserve original evidence byte-for-byte;
+7. open rebuilt preview through Explorer;
+8. generate at least one additional compatible Project Detail page using the shared runtime;
+9. produce a passing deterministic integrity report.
 
-1. identify the Project Detail archetype;
-2. rebuild its representative page;
-3. generate clean local HTML/CSS/JS output;
-4. resolve all required locally captured resources or report exact misses;
-5. generate expected component boundaries from M01 identities;
-6. preserve original source artifacts byte-for-byte;
-7. open rebuilt preview through Aspirator;
-8. generate at least one additional compatible Project Detail page from page data/structure reuse;
-9. produce a passing deterministic fidelity report before claiming the archetype rebuild successful.
-
-Home becomes certification case two after Project Detail passes.
+Home becomes certification case two.
 
 ## Acceptance criteria
 
 M02 is complete when:
 
-- an M01 archetype can be selected by id and rebuilt through one public compiler API;
-- the output is autonomous HTML/CSS/JS served by Aspirator without the source framework runtime;
-- component boundaries reference M01 component identities;
-- local assets and CSS dependencies are resolved deterministically;
-- at least two compatible pages in one archetype can share the same generated runtime with page-specific data where safely extractable;
-- original crawl/system artifacts are unchanged;
-- integrity verification passes with no broken local references;
-- the Explorer can switch between Original and Rebuilt previews;
-- HTTP and MCP expose the reconstruction result;
-- Brand Appart Project Detail passes the M02 certification procedure.
+- one public compiler API rebuilds an M01 archetype by id;
+- output runs through Aspirator without the source framework runtime;
+- component boundaries reference M01 identities and stable locators;
+- local CSS/assets resolve deterministically;
+- at least two compatible pages share one archetype runtime with page-specific data where safely extractable;
+- original evidence remains unchanged;
+- integrity verification reports no broken local references;
+- Explorer switches between Original and Rebuilt;
+- HTTP and MCP expose reconstruction state/results;
+- Brand Appart Project Detail passes the certification procedure.
 
-## Non-goals after acceptance
+A passing M02 result is a structurally faithful, dependency-resolved reconstruction baseline. It is not automatically pixel-perfect, legally redistributable, redesigned, or production-deployed.
 
-A passing M02 rebuild is not automatically a pixel-perfect clone, a legally redistributable asset package, a redesign, or a production deployment. It is a structurally faithful, dependency-resolved, editable reconstruction baseline.
-
-M03 may transform identity and content. M04 may add other export targets. M06 may add automated visual-diff scoring.
+M03 handles identity/content transformation. M04 adds other export targets. M06 adds automated visual-diff scoring.
