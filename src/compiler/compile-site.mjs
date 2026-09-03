@@ -54,6 +54,7 @@ async function writeJson(target, value) {
 async function writePreviews({ root, domain, pages }) {
   const previewDir = assertInsideRoot(root, path.join(root, 'system', 'preview'));
   await fs.mkdir(previewDir, { recursive: true });
+  const baseHref = `/exports/${encodeURIComponent(domain)}/pages/`;
 
   for (const page of pages) {
     if (!page.html) continue;
@@ -66,7 +67,7 @@ async function writePreviews({ root, domain, pages }) {
       throw error;
     }
 
-    const normalized = normalizePreviewHtml({ html, domain });
+    const normalized = normalizePreviewHtml({ html, domain, baseHref });
     await fs.writeFile(path.join(previewDir, `${page.id}.html`), normalized, 'utf8');
   }
 }
