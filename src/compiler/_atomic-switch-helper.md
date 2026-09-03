@@ -1,1 +1,0 @@
-Atomic switch will replace the public module entrypoints with v2 re-export shims.

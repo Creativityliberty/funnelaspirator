@@ -1,1 +1,0 @@
-export { buildPageSignatureV2 as buildPageSignature } from './page-signature-v2.mjs';
