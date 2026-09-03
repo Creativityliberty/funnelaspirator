@@ -1,0 +1,13 @@
+{
+  "url": "https://example.test/",
+  "title": "Home",
+  "designTokens": {"colors":{"text":["#111111"],"background":["#ffffff"]}},
+  "motion": {"detectedLibraries":[]},
+  "microInteractions": {"ctas":[]},
+  "components": [
+    {"tag":"header","role":"navigation","classes":"site-header"},
+    {"tag":"section","role":"hero","classes":"hero"},
+    {"tag":"section","role":"work-grid","classes":"work-grid"},
+    {"tag":"footer","role":"contentinfo","classes":"site-footer"}
+  ]
+}
