@@ -36,7 +36,7 @@ function idSelector(id) {
   return `[id="${escapeAttributeValue(id)}"]`;
 }
 
-function elementFingerprint($, element) {
+export function elementFingerprint($, element) {
   const node = $(element);
   const parent = node.parent();
   const payload = {
