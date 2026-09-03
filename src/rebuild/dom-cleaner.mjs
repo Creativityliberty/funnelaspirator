@@ -14,9 +14,8 @@ function isHiddenPixel(node) {
   return tiny && hidden;
 }
 
-export function cleanRebuildDocument({ html = '' } = {}) {
-  const $ = cheerio.load(html);
-  const removed = {
+function createRemoved() {
+  return {
     scripts: 0,
     preloads: 0,
     hints: 0,
@@ -24,7 +23,9 @@ export function cleanRebuildDocument({ html = '' } = {}) {
     formsNeutralized: 0,
     srcsets: 0,
   };
+}
 
+function cleanTree($, removed) {
   $('script').each((_i, element) => {
     const node = $(element);
     const type = String(node.attr('type') || '').toLowerCase();
@@ -86,6 +87,18 @@ export function cleanRebuildDocument({ html = '' } = {}) {
     node.attr('action', '#');
     removed.formsNeutralized += 1;
   });
+}
 
+export function cleanRebuildDocument({ html = '' } = {}) {
+  const $ = cheerio.load(html);
+  const removed = createRemoved();
+  cleanTree($, removed);
   return { html: $.html(), removed };
+}
+
+export function cleanRebuildFragment({ html = '' } = {}) {
+  const $ = cheerio.load(html, null, false);
+  const removed = createRemoved();
+  cleanTree($, removed);
+  return { html: $.root().html() || '', removed };
 }
