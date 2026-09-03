@@ -21,4 +21,5 @@ test('normalizer keeps same-domain navigation inside preview sandbox', () => {
   const result = normalizePreviewHtml({ html, domain: 'example.test' });
   assert.equal(result.includes('data-aspirator-route="/work/alpha"'), true);
   assert.equal(result.includes('href="#"'), true);
+  assert.equal(result.includes('aspirator:navigate'), true);
 });
