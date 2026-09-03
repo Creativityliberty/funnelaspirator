@@ -65,3 +65,13 @@ jobs:
           fi
 
           npm run test:mcp
+
+      - name: Package certification runner
+        run: tar -czf /tmp/aspirator-certification-runner.tgz --exclude=.git .
+
+      - name: Upload certification runner
+        uses: actions/upload-artifact@v4
+        with:
+          name: aspirator-certification-runner
+          path: /tmp/aspirator-certification-runner.tgz
+          retention-days: 1
