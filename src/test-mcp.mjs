@@ -87,6 +87,9 @@ try {
     'get_archetype',
     'list_components',
     'get_component',
+    'rebuild_archetype',
+    'get_rebuild_manifest',
+    'get_rebuild_report',
   ];
   const toolMap = new Map(tools.map((tool) => [tool.name, tool]));
   const missing = expectedToolNames.filter((name) => !toolMap.has(name));
@@ -101,6 +104,9 @@ try {
   const getCrawledFile = toolMap.get('get_crawled_file');
   const compileSiteSystem = toolMap.get('compile_site_system');
   const listArchetypes = toolMap.get('list_archetypes');
+  const rebuildArchetype = toolMap.get('rebuild_archetype');
+  const rebuildManifest = toolMap.get('get_rebuild_manifest');
+  const rebuildReport = toolMap.get('get_rebuild_report');
 
   console.log('Checking annotations...');
   if (
@@ -113,6 +119,13 @@ try {
   if (getCrawledFile.annotations?.readOnlyHint !== true) throw new Error('get_crawled_file annotations incorrect');
   if (compileSiteSystem.annotations?.readOnlyHint !== false) throw new Error('compile_site_system annotations incorrect');
   if (listArchetypes.annotations?.readOnlyHint !== true) throw new Error('list_archetypes annotations incorrect');
+  if (
+    rebuildArchetype.annotations?.readOnlyHint !== false
+    || rebuildArchetype.annotations?.destructiveHint !== false
+    || rebuildArchetype.annotations?.openWorldHint !== false
+  ) throw new Error('rebuild_archetype annotations incorrect');
+  if (rebuildManifest.annotations?.readOnlyHint !== true) throw new Error('get_rebuild_manifest annotations incorrect');
+  if (rebuildReport.annotations?.readOnlyHint !== true) throw new Error('get_rebuild_report annotations incorrect');
 
   console.log('Step 3: Verifying get_crawled_file error behavior...');
   const callResponse = await postRequest('/mcp', JSON.stringify({
@@ -132,7 +145,7 @@ try {
     throw new Error('Expected call response to indicate an error for nonexistent file.');
   }
 
-  console.log(`✅ MCP integration verified: ${expectedToolNames.length} required legacy + M01 tools present.`);
+  console.log(`✅ MCP integration verified: ${expectedToolNames.length} required legacy + M01 + M02 tools present.`);
   process.exit(0);
 } catch (error) {
   console.error('❌ Test failed:', error);
