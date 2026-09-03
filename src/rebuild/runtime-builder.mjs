@@ -43,7 +43,11 @@ document.documentElement.dataset.aspiratorPageId = pageId;
 
 for (const slot of document.querySelectorAll('[data-aspirator-component]')) {
   const id = slot.getAttribute('data-aspirator-component');
-  const markup = components[id];
+  const occurrence = slot.getAttribute('data-aspirator-occurrence');
+  const entry = components[id];
+  const markup = typeof entry === 'string'
+    ? entry
+    : (entry && occurrence != null ? entry[occurrence] : null) || (entry ? Object.values(entry)[0] : null);
   if (!markup) continue;
   const template = document.createElement('template');
   template.innerHTML = markup.trim();
@@ -81,6 +85,25 @@ window.__ASPIRATOR_REBUILD__ = { pageId, pageData, schema, excludedPageIds };
 `;
 }
 
+function buildComponentMap(components) {
+  const grouped = {};
+  for (const component of components) {
+    if (!component?.componentId || typeof component.markup !== 'string') continue;
+    const id = component.componentId;
+    const index = Number.isInteger(component.occurrenceIndex) ? String(component.occurrenceIndex) : null;
+    if (index == null && grouped[id] == null) {
+      grouped[id] = component.markup;
+      continue;
+    }
+    if (typeof grouped[id] === 'string') {
+      grouped[id] = { default: grouped[id] };
+    }
+    if (!grouped[id] || typeof grouped[id] !== 'object') grouped[id] = {};
+    grouped[id][index ?? 'default'] = component.markup;
+  }
+  return grouped;
+}
+
 export async function buildVanillaRuntime({
   rebuildRoot,
   archetype,
@@ -94,12 +117,7 @@ export async function buildVanillaRuntime({
   const root = path.resolve(rebuildRoot);
   await fs.mkdir(root, { recursive: true });
 
-  const componentMap = {};
-  for (const component of components) {
-    if (!component?.componentId || typeof component.markup !== 'string') continue;
-    componentMap[component.componentId] = component.markup;
-  }
-
+  const componentMap = buildComponentMap(components);
   const generatedFiles = [];
   generatedFiles.push(await writeText(root, 'styles/tokens.css', styles.tokensCss || ''));
   generatedFiles.push(await writeText(root, 'styles/base.css', styles.baseCss || ''));
