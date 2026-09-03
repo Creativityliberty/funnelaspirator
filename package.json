@@ -6,6 +6,8 @@
   "scripts": {
     "dev": "node src/server.mjs",
     "crawl": "node src/crawl.mjs",
+    "compile": "node src/compile-cli.mjs",
+    "test": "node --test",
     "install:browsers": "playwright install chromium"
   },
   "dependencies": {
