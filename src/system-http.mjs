@@ -22,37 +22,37 @@ export function registerSystemRoutes(app, { exportsDir }) {
     catch (error) { res.status(statusFor(error)).json({ success: false, error: error.message }); }
   });
 
-  app.get('/api/results/:domain/pages', async (req, res) => {
+  app.get('/api/results/:domain/system/pages', async (req, res) => {
     try { const system = await readCompiledSystem(exportsDir, req.params.domain); res.json({ success: true, domain: req.params.domain, pages: system.pages }); }
     catch (error) { res.status(statusFor(error)).json({ success: false, error: error.message }); }
   });
 
-  app.get('/api/results/:domain/pages/:pageId', async (req, res) => {
+  app.get('/api/results/:domain/system/pages/:pageId', async (req, res) => {
     try { const system = await readCompiledSystem(exportsDir, req.params.domain); res.json({ success: true, domain: req.params.domain, page: findById(system.pages, req.params.pageId, 'page') }); }
     catch (error) { res.status(statusFor(error)).json({ success: false, error: error.message }); }
   });
 
-  app.get('/api/results/:domain/archetypes', async (req, res) => {
+  app.get('/api/results/:domain/system/archetypes', async (req, res) => {
     try { const system = await readCompiledSystem(exportsDir, req.params.domain); res.json({ success: true, domain: req.params.domain, archetypes: system.archetypes }); }
     catch (error) { res.status(statusFor(error)).json({ success: false, error: error.message }); }
   });
 
-  app.get('/api/results/:domain/archetypes/:archetypeId', async (req, res) => {
+  app.get('/api/results/:domain/system/archetypes/:archetypeId', async (req, res) => {
     try { const system = await readCompiledSystem(exportsDir, req.params.domain); res.json({ success: true, domain: req.params.domain, archetype: findById(system.archetypes, req.params.archetypeId, 'archetype') }); }
     catch (error) { res.status(statusFor(error)).json({ success: false, error: error.message }); }
   });
 
-  app.get('/api/results/:domain/components', async (req, res) => {
+  app.get('/api/results/:domain/system/components', async (req, res) => {
     try { const system = await readCompiledSystem(exportsDir, req.params.domain); res.json({ success: true, domain: req.params.domain, components: system.components }); }
     catch (error) { res.status(statusFor(error)).json({ success: false, error: error.message }); }
   });
 
-  app.get('/api/results/:domain/components/:componentId', async (req, res) => {
+  app.get('/api/results/:domain/system/components/:componentId', async (req, res) => {
     try { const system = await readCompiledSystem(exportsDir, req.params.domain); res.json({ success: true, domain: req.params.domain, component: findById(system.components, req.params.componentId, 'component') }); }
     catch (error) { res.status(statusFor(error)).json({ success: false, error: error.message }); }
   });
 
-  app.get('/api/results/:domain/preview/:pageId', async (req, res) => {
+  app.get('/api/results/:domain/system/preview/:pageId', async (req, res) => {
     try {
       const system = await readCompiledSystem(exportsDir, req.params.domain);
       const page = findById(system.pages, req.params.pageId, 'page');
