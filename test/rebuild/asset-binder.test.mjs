@@ -60,6 +60,38 @@ test('asset binder ignores virtual Next image optimizer srcset candidates', asyn
   }
 });
 
+test('asset binder never copies source executable scripts or known tracking captures', async () => {
+  const tempSource = await fs.mkdtemp(path.join(os.tmpdir(), 'aspirator-assets-tracking-source-'));
+  const rebuildRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'aspirator-assets-tracking-output-'));
+  try {
+    await fs.mkdir(path.join(tempSource, 'assets', 'www.googletagmanager.com'), { recursive: true });
+    await fs.mkdir(path.join(tempSource, 'assets', 'app.citeme.io'), { recursive: true });
+    await fs.writeFile(path.join(tempSource, 'assets', 'www.googletagmanager.com', 'gtm.js'), 'tracking');
+    await fs.writeFile(path.join(tempSource, 'assets', 'app.citeme.io', 'pixel'), 'pixel');
+
+    const result = await bindAssets({
+      references: [
+        'assets/www.googletagmanager.com/gtm.js',
+        'assets/app.citeme.io/pixel',
+      ],
+      sourceRoot: tempSource,
+      rebuildRoot,
+      assetRegistry: [],
+    });
+
+    assert.equal(result.assets.length, 0);
+    assert.equal(result.unresolved.length, 0);
+    assert.equal(result.external.length, 0);
+    assert.deepEqual(result.ignored.sort(), [
+      'assets/app.citeme.io/pixel',
+      'assets/www.googletagmanager.com/gtm.js',
+    ]);
+  } finally {
+    await fs.rm(tempSource, { recursive: true, force: true });
+    await fs.rm(rebuildRoot, { recursive: true, force: true });
+  }
+});
+
 test('asset binder reports missing local resources instead of inventing them', async () => {
   const rebuildRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'aspirator-assets-missing-'));
   try {
