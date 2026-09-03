@@ -2,9 +2,9 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Reconstruct an M01 site archetype into deterministic, autonomous, inspectable HTML/CSS/JS with reusable component boundaries, local assets, shared page data, integrity verification, Explorer preview, HTTP and MCP access.
+**Goal:** Reconstruct one M01 site archetype into deterministic, autonomous, inspectable HTML/CSS/JS with M01-linked components, local assets, shared page data, integrity verification, Explorer preview, HTTP and MCP access.
 
-**Architecture:** M02 extends the M01 compiled site model to schema v1.1 with source data paths and deterministic component locators. A new `src/rebuild/` subsystem reads the compiled system plus original captured artifacts, slices a representative archetype page conservatively, resolves styles/assets/data, writes into a staging directory, verifies the output, then atomically publishes `exports/{domain}/rebuild/{archetypeId}/`. Existing crawl and `system/` evidence remain immutable.
+**Architecture:** M02 first extends the M01 compiled model to schema v1.1 with source data paths and deterministic DOM locators. A focused `src/rebuild/` subsystem then resolves an archetype representative page, conservatively cleans and slices it, binds CSS/assets/data, builds a vanilla browser runtime in staging, verifies it, and only then publishes `exports/{domain}/rebuild/{archetypeId}/`. Existing crawl and `system/` evidence remain immutable.
 
 **Tech Stack:** Node.js >=18, ES modules, Cheerio, Express 5, MCP SDK, Zod, browser ES modules, Node built-in test runner.
 
@@ -13,16 +13,16 @@
 ## Global Constraints
 
 - M02 is deterministic: no AI redesign, copy rewriting, React/Next/WordPress export or publishing.
-- M02 primary target is vanilla HTML/CSS/JS served by Aspirator; `file://` compatibility is not required.
-- Original `pages/`, `data/`, `assets/`, `screenshots/`, and `system/` evidence must not be modified by reconstruction.
-- All source and output filesystem paths must remain inside `exports/{domain}`.
-- Rebuilds are written to staging and published only after required generation succeeds.
+- M02 target is vanilla HTML/CSS/JS served by Aspirator; `file://` compatibility is not required.
+- Original `pages/`, `data/`, `assets/`, `screenshots/`, and `system/` evidence must never be modified by reconstruction.
+- All source and output paths must remain inside `exports/{domain}`.
+- Rebuilds are generated in staging and published only after required generation succeeds.
 - External scripts, production form submission and tracking are disabled by default.
 - Unknown DOM attributes are preserved unless a rule proves they are framework-only or unsafe.
-- CSS pruning is conservative: keep a relevant captured stylesheet when safe dependency removal cannot be proven.
-- Fonts are not generated or redistributed by M02.
+- CSS pruning is conservative: retain relevant captured CSS when safe dependency removal cannot be proven.
+- Font files are not generated or redistributed by M02.
 - Brand Appart Project Detail is certification case one; Home is case two after Project Detail passes.
-- M02 may capture screenshots for human comparison, but automated visual similarity scoring belongs to M06.
+- Screenshot capture may aid human review, but automated visual similarity scoring remains M06.
 
 ---
 
@@ -31,37 +31,40 @@
 ```text
 src/
 ├── compiler/
-│   ├── schema.mjs                    # bump site-system to v1.1
-│   ├── compile-site.mjs              # expose page.data and v1.1 output
-│   ├── components.mjs                # component occurrences carry locators
-│   └── html-components.mjs           # derive deterministic DOM locators
+│   ├── schema.mjs
+│   ├── load-export-v2.mjs
+│   ├── compile-site.mjs
+│   ├── components.mjs
+│   └── html-components.mjs
 ├── rebuild/
-│   ├── errors.mjs                    # typed M02 error codes
-│   ├── paths.mjs                     # rebuild/staging path safety
-│   ├── source-resolver.mjs           # resolve archetype/page/html/css/assets/data
-│   ├── dom-cleaner.mjs               # conservative source-runtime removal
-│   ├── component-slicer.mjs          # locator → source markup slices
-│   ├── css-compiler.mjs              # safe stylesheet collection + URL rewrite
-│   ├── asset-binder.mjs              # copy/map local referenced assets
-│   ├── data-extractor.mjs            # page-variable content extraction
-│   ├── runtime-builder.mjs           # index/app/component registry output
-│   ├── verifier.mjs                  # deterministic integrity/fidelity checks
-│   ├── rebuild-store.mjs             # read rebuild manifest/report
-│   └── rebuild-archetype.mjs         # orchestrator + atomic publish
-├── rebuild-cli.mjs                   # CLI facade
-├── system-http.mjs                   # M02 HTTP facade
-├── system-mcp.mjs                    # M02 MCP facade
-└── test-mcp.mjs                      # registry count/names updated
+│   ├── errors.mjs
+│   ├── paths.mjs
+│   ├── source-resolver.mjs
+│   ├── dom-cleaner.mjs
+│   ├── component-slicer.mjs
+│   ├── css-compiler.mjs
+│   ├── asset-binder.mjs
+│   ├── data-extractor.mjs
+│   ├── runtime-builder.mjs
+│   ├── verifier.mjs
+│   ├── rebuild-store.mjs
+│   └── rebuild-archetype.mjs
+├── rebuild-cli.mjs
+├── system-http.mjs
+├── system-mcp.mjs
+└── test-mcp.mjs
 
-public/studio/
-├── explorer.js                       # Build + original/rebuilt mode
-├── preview.js                        # preview source switch
-├── system-inspector.js               # rebuild status/report
-└── explorer.css                      # mode/status controls
-
-public/system-explorer.html           # controls markup
+public/
+├── system-explorer.html
+└── studio/
+    ├── explorer.js
+    ├── preview.js
+    ├── system-inspector.js
+    └── explorer.css
 
 test/
+├── helpers/
+│   └── copy-fixture.mjs
 ├── compiler/
 │   ├── site-system-v11.test.mjs
 │   └── component-locators.test.mjs
@@ -75,11 +78,10 @@ test/
 │   ├── runtime-builder.test.mjs
 │   ├── verifier.test.mjs
 │   └── rebuild-archetype.test.mjs
-├── api/
-│   ├── rebuild-api.test.mjs
-│   └── rebuild-mcp.test.mjs
-└── fixtures/mini-site/
-    └── ...                            # extended project-detail fixture
+└── api/
+    ├── rebuild-api.test.mjs
+    ├── rebuild-mcp.test.mjs
+    └── explorer-contract.test.mjs
 ```
 
 Generated output:
@@ -100,31 +102,32 @@ exports/{domain}/rebuild/{archetypeId}/
 │   ├── archetype.json
 │   └── pages/*.json
 ├── assets/
-│   └── ...
 └── reports/
     └── fidelity.json
 ```
 
 ---
 
-### Task 1: Site-System v1.1 Source Metadata + Stable Component Locators
+### Task 1: Site-System v1.1 + Source Data Paths + Stable DOM Locators
 
 **Files:**
 - Modify: `src/compiler/schema.mjs`
+- Modify: `src/compiler/load-export-v2.mjs`
 - Modify: `src/compiler/compile-site.mjs`
 - Modify: `src/compiler/components.mjs`
 - Modify: `src/compiler/html-components.mjs`
 - Create: `test/compiler/site-system-v11.test.mjs`
 - Create: `test/compiler/component-locators.test.mjs`
-- Modify: `test/fixtures/mini-site/pages/work-alpha.html`
 
 **Interfaces:**
 - Produces: `SITE_SYSTEM_VERSION === '1.1'`
-- Produces: public page `{ data: 'data/<file>.json' | null }`
-- Produces: occurrence locator `{ strategy, selector, ordinal, fingerprint }`
-- Compatibility: M01 v1.0 consumers must continue reading existing fields unchanged.
+- Normalized loaded page gains `dataPath: string | null` while retaining parsed `data` object.
+- Public page gains `data: string | null` containing the original `data/*.json` relative path.
+- Component source record gains `locator: { strategy, selector, ordinal, fingerprint }`.
+- Component registry occurrence propagates `locator` unchanged.
+- Existing v1.0 fields remain unchanged.
 
-- [ ] **Step 1: Write failing v1.1 page metadata test**
+- [ ] **Step 1: Write the failing v1.1 page metadata test**
 
 ```js
 import test from 'node:test';
@@ -136,139 +139,187 @@ const fixture = path.resolve('test/fixtures/mini-site');
 
 test('site-system v1.1 exposes original page data paths', async () => {
   const system = await compileSiteSystem({ exportDir: fixture, write: false });
+  const home = system.pages.find((page) => page.route === '/');
   assert.equal(system.version, '1.1');
-  assert.equal(system.pages[0].data, 'data/index.json');
+  assert.equal(home.data, 'data/index.json');
 });
 ```
 
-- [ ] **Step 2: Run it and verify RED**
+- [ ] **Step 2: Run the test and verify RED**
 
 Run: `node --test test/compiler/site-system-v11.test.mjs`
 
-Expected: FAIL because current version is `1.0` and page records omit `data`.
+Expected: FAIL because current system version is `1.0` and public pages omit the data path.
 
-- [ ] **Step 3: Add the minimal schema/page metadata change**
+- [ ] **Step 3: Retain the winning data ref in the loader and emit v1.1**
 
-```js
-// schema.mjs
-export const SITE_SYSTEM_VERSION = '1.1';
-
-// compile-site.mjs publicPage()
-return {
-  ...,
-  data: page.dataPath || null,
-};
-```
-
-If the loader currently does not retain the relative JSON path, extend its normalized page record with `dataPath` while keeping `page.data` as the parsed JSON object.
-
-- [ ] **Step 4: Write failing locator tests**
+In `load-export-v2.mjs`, track the candidate that actually loaded:
 
 ```js
-test('component occurrences use unique ids before selector ordinals', () => {
-  const components = deriveComponentsFromHtml(`
-    <main>
-      <section id="hero" class="project_hero">A</section>
-      <section class="chapter">B</section>
-      <section class="chapter">C</section>
-    </main>
-  `);
-  assert.equal(components[0].locator.strategy, 'id');
-  assert.equal(components[0].locator.selector, '#hero');
-  assert.equal(components[1].locator.strategy, 'selector-ordinal');
-  assert.equal(components[2].locator.ordinal, 1);
-});
-```
-
-- [ ] **Step 5: Implement deterministic locators**
-
-Add a helper with exact priority:
-
-```js
-export function buildElementLocator($, element) {
-  const node = $(element);
-  const id = node.attr('id');
-  if (id && $(`[id="${cssEscape(id)}"]`).length === 1) {
-    return {
-      strategy: 'id',
-      selector: `#${cssEscape(id)}`,
-      ordinal: 0,
-      fingerprint: elementFingerprint($, element),
-    };
+let pageData = null;
+let dataPath = null;
+for (const ref of candidateDataRefs(source)) {
+  const candidate = assertInsideRoot(root, path.join(root, ref));
+  const value = await readJsonIfExists(candidate);
+  if (value) {
+    pageData = value;
+    dataPath = ref.split(path.sep).join('/');
+    break;
   }
-
-  const tag = String(element.tagName || element.name || '').toLowerCase();
-  const classes = normalizedClasses(node.attr('class') || '');
-  const selector = classes ? `${tag}.${classes.split(' ').map(cssEscape).join('.')}` : tag;
-  const matches = $(selector).toArray();
-  const ordinal = matches.indexOf(element);
-  return {
-    strategy: ordinal >= 0 ? 'selector-ordinal' : 'structural',
-    selector,
-    ordinal: Math.max(ordinal, 0),
-    fingerprint: elementFingerprint($, element),
-  };
 }
 ```
 
-Store `locator` on derived source components, then propagate it through `buildComponentRegistry()` occurrence records.
+Add `dataPath` to the normalized page record. In `schema.mjs` set:
+
+```js
+export const SITE_SYSTEM_VERSION = '1.1';
+```
+
+In `compile-site.mjs` add:
+
+```js
+data: page.dataPath || null,
+```
+
+- [ ] **Step 4: Write failing locator tests using current HTML extraction**
+
+```js
+import { deriveComponentsFromHtml } from '../../src/compiler/html-components.mjs';
+
+test('HTML components prefer a unique id locator then selector ordinal', () => {
+  const components = deriveComponentsFromHtml(`
+    <html><body><main>
+      <section id="hero" class="project_hero">A</section>
+      <section class="chapter">B</section>
+      <section class="chapter">C</section>
+    </main></body></html>
+  `);
+  const hero = components.find((item) => item.id === 'hero');
+  const chapters = components.filter((item) => item.role === 'chapter');
+  assert.equal(hero.locator.strategy, 'id');
+  assert.equal(hero.locator.selector, '#hero');
+  assert.equal(chapters[0].locator.strategy, 'selector-ordinal');
+  assert.equal(chapters[0].locator.ordinal, 0);
+  assert.equal(chapters[1].locator.ordinal, 1);
+  assert.match(chapters[0].locator.fingerprint, /^[a-f0-9]{12}$/);
+});
+```
+
+- [ ] **Step 5: Implement deterministic locator helpers**
+
+Add local helpers in `html-components.mjs`:
+
+```js
+import crypto from 'crypto';
+
+function cssEscape(value) {
+  return String(value).replace(/[^a-zA-Z0-9_-]/g, (char) => `\\${char.codePointAt(0).toString(16)} `);
+}
+
+function normalizedClasses(value = '') {
+  return String(value).split(/\s+/).filter(Boolean).sort().join(' ');
+}
+
+function elementFingerprint($, element) {
+  const node = $(element);
+  const payload = JSON.stringify({
+    tag: String(element?.tagName || element?.name || '').toLowerCase(),
+    id: node.attr('id') || '',
+    classes: normalizedClasses(node.attr('class') || ''),
+    childTags: node.children().toArray().map((child) => String(child.tagName || child.name || '').toLowerCase()),
+  });
+  return crypto.createHash('sha1').update(payload).digest('hex').slice(0, 12);
+}
+```
+
+`buildElementLocator($, element)` must use this exact priority:
+
+1. unique id;
+2. tag + normalized class selector + ordinal among all matches;
+3. structural strategy with fingerprint when selector construction is impossible.
+
+`componentFromElement()` attaches `locator`, and `buildComponentRegistry()` copies `component.locator || null` into every occurrence.
 
 - [ ] **Step 6: Run compiler regression suite**
 
 Run: `node --test test/compiler/*.test.mjs`
 
-Expected: PASS, including existing M01 tests.
+Expected: all M01 + new v1.1 tests PASS.
 
 - [ ] **Step 7: Commit**
 
 ```bash
-git add src/compiler test/compiler test/fixtures/mini-site
- git commit -m "feat(m02): add site-system v1.1 reconstruction metadata"
+git add src/compiler test/compiler
+git commit -m "feat(m02): add site-system v1.1 reconstruction metadata"
 ```
 
 ---
 
-### Task 2: Rebuild Errors, Safe Paths, Source Resolver and v1.0 Fallback
+### Task 2: Rebuild Errors + Safe Paths + Source Resolver + v1.0 Fallback
 
 **Files:**
 - Create: `src/rebuild/errors.mjs`
 - Create: `src/rebuild/paths.mjs`
 - Create: `src/rebuild/source-resolver.mjs`
+- Create: `test/helpers/copy-fixture.mjs`
 - Create: `test/rebuild/source-resolver.test.mjs`
 
 **Interfaces:**
-- Produces: `RebuildError(code, message, details?)`
-- Produces: `resolveRebuildPaths(domainDir, archetypeId)`
-- Produces: `resolveArchetypeSource({ domainDir, archetypeId })`
-- Returns: `{ system, archetype, representativePage, sourceHtml, sourceData, componentOccurrences, styleRefs, assetRefs }`
+- Produces: `RebuildError(code, message, details = null)`.
+- Produces: `resolveRebuildPaths(domainDir, archetypeId) -> { rebuildRoot, stagingRoot }`.
+- Produces: `resolveArchetypeSource({ domainDir, archetypeId })` returning `{ system, archetype, representativePage, sourceHtml, sourceData, componentOccurrences, styleRefs, assetRefs }`.
+- Accepts site-system v1.1; supports v1.0 fallback without mutating/recompiling evidence.
 
-- [ ] **Step 1: Write failing source resolver tests**
+- [ ] **Step 1: Create a reusable temp fixture helper**
 
 ```js
-test('resolver loads representative source and never escapes export root', async () => {
-  const source = await resolveArchetypeSource({
-    domainDir: fixture,
-    archetypeId: knownArchetypeId,
-  });
-  assert.ok(source.sourceHtml.includes('<'));
-  assert.equal(source.archetype.id, knownArchetypeId);
+// test/helpers/copy-fixture.mjs
+import fs from 'fs/promises';
+import os from 'os';
+import path from 'path';
+
+export async function copyMiniSiteFixture() {
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), 'aspirator-m02-'));
+  await fs.cp(path.resolve('test/fixtures/mini-site'), root, { recursive: true });
+  return root;
+}
+```
+
+- [ ] **Step 2: Write failing resolver tests with a real compiled fixture**
+
+```js
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { compileSiteSystem } from '../../src/compiler/compile-site.mjs';
+import { copyMiniSiteFixture } from '../helpers/copy-fixture.mjs';
+import { resolveArchetypeSource } from '../../src/rebuild/source-resolver.mjs';
+
+test('resolver loads a representative archetype source', async () => {
+  const domainDir = await copyMiniSiteFixture();
+  const system = await compileSiteSystem({ exportDir: domainDir, write: true });
+  const archetype = system.archetypes.find((item) => item.pageIds.length > 1);
+  assert.ok(archetype, 'fixture must contain a reusable archetype');
+  const source = await resolveArchetypeSource({ domainDir, archetypeId: archetype.id });
+  assert.equal(source.archetype.id, archetype.id);
+  assert.match(source.sourceHtml, /<html|<main|<body/i);
 });
 
-test('resolver rejects unknown archetypes with INVALID_ARCHETYPE', async () => {
+test('resolver rejects invalid archetype ids', async () => {
+  const domainDir = await copyMiniSiteFixture();
   await assert.rejects(
-    resolveArchetypeSource({ domainDir: fixture, archetypeId: '../../etc' }),
-    (error) => error.code === 'INVALID_ARCHETYPE' || error.code === 'OUTPUT_ESCAPE',
+    resolveArchetypeSource({ domainDir, archetypeId: '../../etc' }),
+    (error) => error.code === 'INVALID_ARCHETYPE',
   );
 });
 ```
 
-- [ ] **Step 2: Verify RED**
+- [ ] **Step 3: Run tests and verify RED**
 
 Run: `node --test test/rebuild/source-resolver.test.mjs`
 
 Expected: module-not-found.
 
-- [ ] **Step 3: Implement typed error codes**
+- [ ] **Step 4: Implement typed error codes**
 
 ```js
 export class RebuildError extends Error {
@@ -291,25 +342,27 @@ export const REBUILD_CODES = Object.freeze({
 });
 ```
 
-- [ ] **Step 4: Implement safe rebuild paths**
+- [ ] **Step 5: Implement path validation and source resolution**
+
+Archetype ids must match:
 
 ```js
-export function resolveRebuildPaths(domainDir, archetypeId) {
-  const safeId = String(archetypeId);
-  if (!/^arch-[a-z0-9-]+$/i.test(safeId)) {
-    throw new RebuildError('INVALID_ARCHETYPE', `Invalid archetype id: ${safeId}`);
-  }
-  const rebuildRoot = assertInsideRoot(domainDir, path.join(domainDir, 'rebuild', safeId));
-  const stagingRoot = assertInsideRoot(domainDir, path.join(domainDir, 'rebuild', '.staging', safeId));
-  return { rebuildRoot, stagingRoot };
-}
+/^arch-[a-z0-9-]+$/i
 ```
 
-- [ ] **Step 5: Implement v1.1 read + v1.0 fallback**
+Both `rebuildRoot` and `stagingRoot` are wrapped by existing `assertInsideRoot()`.
 
-The resolver must use `page.data` when present. For a v1.0 manifest, derive `data/<basename>.json` from the page HTML or route only if that file exists; otherwise return `sourceData: {}` rather than inventing content.
+For v1.1 use `representativePage.data`. For v1.0, derive one candidate only from the representative HTML basename:
 
-- [ ] **Step 6: Run tests**
+```js
+const derivedDataPath = representativePage.html
+  ? `data/${path.basename(representativePage.html, path.extname(representativePage.html))}.json`
+  : null;
+```
+
+Read it only if it exists. Otherwise set `sourceData = {}`. Do not invent route-derived content.
+
+- [ ] **Step 6: Run Task 2 + compiler tests**
 
 Run: `node --test test/rebuild/source-resolver.test.mjs test/compiler/*.test.mjs`
 
@@ -318,8 +371,8 @@ Expected: PASS.
 - [ ] **Step 7: Commit**
 
 ```bash
-git add src/rebuild test/rebuild
- git commit -m "feat(m02): resolve safe archetype reconstruction sources"
+git add src/rebuild test/helpers test/rebuild
+git commit -m "feat(m02): resolve safe archetype reconstruction sources"
 ```
 
 ---
@@ -333,16 +386,21 @@ git add src/rebuild test/rebuild
 - Create: `test/rebuild/component-slicer.test.mjs`
 
 **Interfaces:**
-- Produces: `cleanRebuildDocument({ html, sourceUrl }) -> { html, removed }`
-- Produces: `sliceComponents({ html, occurrences }) -> { components, residualHtml, unresolved }`
+- Produces: `cleanRebuildDocument({ html, sourceUrl = '' }) -> { html, removed }`.
+- Produces: `sliceComponents({ html, occurrences }) -> { components, residualHtml, unresolved }`.
+- `components[]` records contain `{ componentId, role, variantId, markup, locator }`.
 
 - [ ] **Step 1: Write DOM cleaner RED tests**
 
 ```js
-test('cleaner removes tracking and Next hydration but preserves aria/data attributes', () => {
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { cleanRebuildDocument } from '../../src/rebuild/dom-cleaner.mjs';
+
+test('cleaner strips tracking and hydration while preserving accessible/data markup', () => {
   const result = cleanRebuildDocument({ html: `
     <html><body>
-      <button aria-label="Open" data-state="ready">Open</button>
+      <form action="https://example.com/lead"><button aria-label="Open" data-state="ready">Open</button></form>
       <script src="https://www.googletagmanager.com/gtm.js"></script>
       <script>self.__next_f.push([1,"payload"])</script>
     </body></html>
@@ -350,47 +408,50 @@ test('cleaner removes tracking and Next hydration but preserves aria/data attrib
   assert.doesNotMatch(result.html, /googletagmanager|__next_f/);
   assert.match(result.html, /aria-label="Open"/);
   assert.match(result.html, /data-state="ready"/);
+  assert.match(result.html, /data-aspirator-original-action="https:\/\/example.com\/lead"/);
+  assert.match(result.html, /action="#"/);
 });
 ```
 
-- [ ] **Step 2: Implement conservative cleaner**
+- [ ] **Step 2: Implement the conservative cleaner**
 
-Rules must be allow-by-proof, not allow-by-guess:
+Tracking host pattern:
 
 ```js
 const TRACKING_HOSTS = /googletagmanager|google-analytics|facebook\.net|posthog/i;
-
-$('script').each((_i, el) => {
-  const node = $(el);
-  const src = node.attr('src') || '';
-  const text = node.html() || '';
-  if (TRACKING_HOSTS.test(src) || /self\.__next_f|__NEXT_DATA__/.test(text)) {
-    node.remove();
-  }
-});
 ```
 
-Forms keep markup but get production actions neutralized:
+Remove scripts only when their `src` matches tracking hosts or inline text matches `self.__next_f` / `__NEXT_DATA__`. Neutralize form actions but preserve markup and original action in `data-aspirator-original-action`.
+
+- [ ] **Step 3: Write slicer RED test using Task 1 locators**
 
 ```js
-$('form[action]').attr('data-aspirator-original-action', (_i, value) => value).attr('action', '#');
-```
+import { deriveComponentsFromHtml } from '../../src/compiler/html-components.mjs';
+import { sliceComponents } from '../../src/rebuild/component-slicer.mjs';
 
-- [ ] **Step 3: Write slicer RED tests**
-
-```js
-test('slicer resolves id and ordinal locators and reports misses', () => {
-  const result = sliceComponents({
-    html: '<main><section id="hero">H</section><section class="chapter">A</section></main>',
-    occurrences: [heroOccurrence, chapterOccurrence, missingOccurrence],
+test('slicer resolves derived locators and reports one explicit miss', () => {
+  const html = '<html><body><main><section id="hero" class="hero">H</section><section class="chapter">A</section></main></body></html>';
+  const derived = deriveComponentsFromHtml(html);
+  const occurrences = derived.map((item, index) => ({
+    componentId: `cmp-${index}`,
+    role: item.role,
+    variantId: null,
+    locator: item.locator,
+  }));
+  occurrences.push({
+    componentId: 'cmp-missing',
+    role: 'missing',
+    variantId: null,
+    locator: { strategy: 'id', selector: '#does-not-exist', ordinal: 0, fingerprint: '000000000000' },
   });
-  assert.equal(result.components.length, 2);
+  const result = sliceComponents({ html, occurrences });
+  assert.equal(result.components.length, derived.length);
   assert.equal(result.unresolved.length, 1);
-  assert.match(result.components[0].markup, /id="hero"/);
+  assert.match(result.residualHtml, /data-aspirator-component=/);
 });
 ```
 
-- [ ] **Step 4: Implement locator resolution**
+- [ ] **Step 4: Implement locator resolution with fingerprint verification**
 
 ```js
 function locate($, locator) {
@@ -400,29 +461,27 @@ function locate($, locator) {
 }
 ```
 
-Verify the located node fingerprint before accepting it. A mismatch becomes unresolved; do not silently take another node.
+After locating, recompute the Task 1 fingerprint. Reject mismatches instead of silently selecting a different node.
 
-- [ ] **Step 5: Preserve residual page shell**
-
-Clone the cleaned page and replace successfully sliced roots with deterministic placeholders:
+Replace each successfully sliced root in a cloned page with:
 
 ```html
-<div data-aspirator-component="cmp-project-hero"></div>
+<div data-aspirator-component="cmp-id"></div>
 ```
 
-Everything not confidently sliced stays in `residualHtml`.
+Unclassified markup remains in `residualHtml`.
 
-- [ ] **Step 6: Run tests**
+- [ ] **Step 5: Run Task 3 tests**
 
 Run: `node --test test/rebuild/dom-cleaner.test.mjs test/rebuild/component-slicer.test.mjs`
 
 Expected: PASS.
 
-- [ ] **Step 7: Commit**
+- [ ] **Step 6: Commit**
 
 ```bash
 git add src/rebuild/dom-cleaner.mjs src/rebuild/component-slicer.mjs test/rebuild
- git commit -m "feat(m02): clean captured DOM and slice located components"
+git commit -m "feat(m02): clean captured DOM and slice located components"
 ```
 
 ---
@@ -434,76 +493,89 @@ git add src/rebuild/dom-cleaner.mjs src/rebuild/component-slicer.mjs test/rebuil
 - Create: `src/rebuild/asset-binder.mjs`
 - Create: `test/rebuild/css-compiler.test.mjs`
 - Create: `test/rebuild/asset-binder.test.mjs`
-- Extend: `test/fixtures/mini-site/styles/site.css`
-- Add fixture assets under: `test/fixtures/mini-site/assets/`
+- Modify: `test/fixtures/mini-site/styles/site.css`
 
 **Interfaces:**
-- Produces: `compileStyles({ sourceHtml, sourceRoot, rebuildRoot, markup })`
-- Returns: `{ files, referencedUrls, unresolved }`
-- Produces: `bindAssets({ references, sourceRoot, rebuildRoot, assetRegistry })`
-- Returns: `{ assets, rewrites, unresolved }`
+- Produces: `compileStyles({ sourceHtml, sourceRoot, markup }) -> { outputs, referencedUrls, unresolved, mode }`.
+- Produces: `bindAssets({ references, sourceRoot, rebuildRoot, assetRegistry = [] }) -> { assets, rewrites, external, unresolved }`.
 
-- [ ] **Step 1: Extend fixture CSS**
+- [ ] **Step 1: Extend fixture CSS with required dependency types**
 
-Include tokens, media query, pseudo-state, keyframes and asset URL:
+Append to `test/fixtures/mini-site/styles/site.css`:
 
 ```css
-:root { --brand: #171412; }
-.project_hero { background-image: url('../assets/hero.jpg'); }
-.project_hero:hover { transform: translateY(-2px); }
-@media (max-width: 700px) { .project_hero { padding: 1rem; } }
+:root { --m02-brand: #171412; }
+.project-hero { background-image: url('../assets/hero.jpg'); animation: reveal 300ms ease; }
+.project-hero:hover { transform: translateY(-2px); }
+@media (max-width: 700px) { .project-hero { padding: 1rem; } }
 @keyframes reveal { from { opacity: 0; } to { opacity: 1; } }
 ```
 
-- [ ] **Step 2: Write CSS compiler RED test**
+- [ ] **Step 2: Write CSS compiler RED test with concrete fixture paths**
 
 ```js
-test('css compiler preserves variables media pseudo rules and referenced keyframes', async () => {
-  const result = await compileStyles({...fixtureArgs});
-  const css = result.outputs.componentsCss;
-  assert.match(result.outputs.tokensCss, /--brand/);
-  assert.match(css, /project_hero:hover/);
-  assert.match(css, /@media/);
-  assert.match(css, /@keyframes reveal/);
+import fs from 'fs/promises';
+import path from 'node:path';
+import { compileStyles } from '../../src/rebuild/css-compiler.mjs';
+
+test('CSS compiler preserves tokens pseudo media keyframes and URLs', async () => {
+  const sourceRoot = path.resolve('test/fixtures/mini-site');
+  const sourceHtml = await fs.readFile(path.join(sourceRoot, 'pages', 'work-alpha.html'), 'utf8');
+  const result = await compileStyles({ sourceHtml, sourceRoot, markup: sourceHtml });
+  assert.match(result.outputs.tokensCss, /--m02-brand/);
+  assert.match(result.outputs.componentsCss, /project-hero:hover/);
+  assert.match(result.outputs.componentsCss, /@media/);
+  assert.match(result.outputs.componentsCss, /@keyframes reveal/);
+  assert.ok(result.referencedUrls.some((value) => value.includes('hero.jpg')));
 });
 ```
 
 - [ ] **Step 3: Implement conservative stylesheet collection**
 
-Collect `<link rel="stylesheet">` and local `<style>` blocks. Split output deterministically:
+Collect local `<link rel="stylesheet">` and inline `<style>`. Emit deterministic strings:
 
-- `tokens.css`: `:root`, `@font-face` declarations without copying font bytes;
-- `base.css`: reset/body/html/global element rules;
-- `layout.css`: page-shell/layout rules;
-- `components.css`: rules matching component/residual markup, plus dependent media/keyframes/pseudo rules.
+- `tokensCss`: `:root` and `@font-face` declarations only;
+- `baseCss`: html/body/reset/global element rules;
+- `layoutCss`: page-shell layout rules;
+- `componentsCss`: component/residual selectors plus required pseudo/media/keyframes.
 
-If selector matching cannot be parsed safely, retain the containing captured stylesheet in `components.css` and record `mode: 'conservative'` in metadata.
+If selector dependency analysis cannot prove safe pruning, include the entire local stylesheet in `componentsCss` and set `mode: 'conservative'`.
 
-- [ ] **Step 4: Write asset binder RED tests**
+- [ ] **Step 4: Write asset binder RED test using temp output**
 
 ```js
-test('asset binder copies referenced local files and records external resources without fetching', async () => {
+import fs from 'fs/promises';
+import os from 'os';
+import path from 'node:path';
+import { bindAssets } from '../../src/rebuild/asset-binder.mjs';
+
+test('asset binder copies local assets and never fetches external resources', async () => {
+  const sourceRoot = path.resolve('test/fixtures/mini-site');
+  const rebuildRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'aspirator-assets-'));
   const result = await bindAssets({
-    references: ['../assets/hero.jpg', 'https://player.vimeo.com/video/1'],
-    ...fixtureArgs,
+    references: ['assets/hero.jpg', 'https://player.vimeo.com/video/1'],
+    sourceRoot,
+    rebuildRoot,
+    assetRegistry: [],
   });
   assert.equal(result.assets.length, 1);
   assert.equal(result.external.length, 1);
   assert.equal(result.unresolved.length, 0);
+  assert.equal(await fs.stat(path.join(rebuildRoot, result.assets[0].target)).then(() => true), true);
 });
 ```
 
-- [ ] **Step 5: Implement asset copy + rewrite map**
+- [ ] **Step 5: Implement deterministic copy/rewrite behavior**
 
-All copied paths must be content-address-stable enough to avoid collisions but human-readable:
+Use SHA-1 of source bytes for collision-safe names:
 
 ```js
 const targetRel = path.posix.join('assets', `${hash.slice(0, 8)}-${path.basename(sourceRel)}`);
 ```
 
-Do not copy fonts automatically. Classify them as `font-reference` and leave them unresolved/metadata-only unless the source file is explicitly allowed by a future policy.
+Do not copy remote URLs. Do not auto-copy font files; classify local font references as `font-reference` metadata for this milestone.
 
-- [ ] **Step 6: Run tests**
+- [ ] **Step 6: Run Task 4 tests**
 
 Run: `node --test test/rebuild/css-compiler.test.mjs test/rebuild/asset-binder.test.mjs`
 
@@ -512,13 +584,13 @@ Expected: PASS.
 - [ ] **Step 7: Commit**
 
 ```bash
-git add src/rebuild test/rebuild test/fixtures/mini-site
- git commit -m "feat(m02): compile styles and bind local reconstruction assets"
+git add src/rebuild test/rebuild test/fixtures/mini-site/styles/site.css
+git commit -m "feat(m02): compile styles and bind local rebuild assets"
 ```
 
 ---
 
-### Task 5: Page Data Extraction + Vanilla Runtime Builder
+### Task 5: Compatible Page Data Extraction + Vanilla Runtime Builder
 
 **Files:**
 - Create: `src/rebuild/data-extractor.mjs`
@@ -527,112 +599,141 @@ git add src/rebuild test/rebuild test/fixtures/mini-site
 - Create: `test/rebuild/runtime-builder.test.mjs`
 
 **Interfaces:**
-- Produces: `extractArchetypeData({ representative, compatiblePages, slices })`
-- Returns: `{ schema, pages, literals, excluded }`
-- Produces: `buildVanillaRuntime({ rebuildRoot, archetype, shell, components, data, styles, assets })`
-- Returns: `{ generatedFiles, entry: 'index.html' }`
+- Produces: `extractArchetypeData({ representativePage, representativeComponents, candidatePages }) -> { schema, pages, literals, excludedPageIds }`.
+- Produces: `buildVanillaRuntime({ rebuildRoot, archetype, shellHtml, components, data, styles }) -> { generatedFiles, entry }`.
 
-- [ ] **Step 1: Write conservative data extraction RED test**
+- [ ] **Step 1: Write concrete compatible/divergent data tests**
 
 ```js
-test('extractor lifts text/image values only when structure matches', () => {
-  const result = extractArchetypeData({ representative, compatiblePages });
-  assert.equal(result.pages['page-002'].title, 'Beta project');
-  assert.equal(result.excluded.length, 0);
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { extractArchetypeData } from '../../src/rebuild/data-extractor.mjs';
+
+test('data extractor accepts matching component sequences and excludes divergent pages', () => {
+  const representativePage = { id: 'page-001', title: 'Alpha', componentIds: ['cmp-hero', 'cmp-footer'] };
+  const candidatePages = [
+    { id: 'page-002', title: 'Beta', componentIds: ['cmp-hero', 'cmp-footer'], values: { heading: 'Beta project', image: 'assets/beta.jpg' } },
+    { id: 'page-003', title: 'Broken', componentIds: ['cmp-hero', 'cmp-gallery', 'cmp-footer'], values: { heading: 'Broken' } },
+  ];
+  const result = extractArchetypeData({
+    representativePage,
+    representativeComponents: ['cmp-hero', 'cmp-footer'],
+    candidatePages,
+  });
+  assert.equal(result.pages['page-002'].heading, 'Beta project');
+  assert.deepEqual(result.excludedPageIds, ['page-003']);
 });
 ```
 
-Add a divergent page case and assert it is excluded instead of coerced.
+- [ ] **Step 2: Implement compatibility before value lifting**
 
-- [ ] **Step 2: Implement compatibility check**
+A candidate is compatible only when its required ordered component id sequence matches the representative required sequence. Do not compare marketing copy.
 
-A compatible page must match the representative component sequence and required locator roles. Use M01 signatures and component ids; do not compare marketing copy.
+Safe value types for M02:
 
-- [ ] **Step 3: Implement safe value lifting**
-
-Start only with:
-
-- text-node content inside resolved components;
-- `href` for local/CTA links;
-- `src`, `poster`, `alt` for media;
+- text content;
+- local/CTA `href`;
+- media `src`, `poster`, `alt`;
 - explicit page JSON fields already captured by M01.
 
-If node counts/roles diverge, keep literal representative markup and mark the field non-variable.
+When field mapping is ambiguous, preserve representative literal markup and do not expose a variable.
 
-- [ ] **Step 4: Write runtime builder RED test**
+- [ ] **Step 3: Write runtime builder RED test with a temp rebuild root**
 
 ```js
-test('runtime builder emits browser-loadable ES module output without source framework runtime', async () => {
-  const result = await buildVanillaRuntime({...args});
+import fs from 'fs/promises';
+import os from 'os';
+import path from 'node:path';
+import { buildVanillaRuntime } from '../../src/rebuild/runtime-builder.mjs';
+
+test('runtime builder emits browser ES modules without source hydration payloads', async () => {
+  const rebuildRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'aspirator-runtime-'));
+  const result = await buildVanillaRuntime({
+    rebuildRoot,
+    archetype: { id: 'arch-project-detail', representativePageId: 'page-001' },
+    shellHtml: '<main><div data-aspirator-component="cmp-hero"></div></main>',
+    components: [{ componentId: 'cmp-hero', markup: '<section class="hero">Hello</section>' }],
+    data: { pages: { 'page-001': {} }, excludedPageIds: [] },
+    styles: { tokensCss: ':root{}', baseCss: '', layoutCss: '', componentsCss: '.hero{}' },
+  });
+  const index = await fs.readFile(path.join(rebuildRoot, 'index.html'), 'utf8');
+  const app = await fs.readFile(path.join(rebuildRoot, 'app.js'), 'utf8');
   assert.ok(result.generatedFiles.includes('index.html'));
-  const index = await fs.readFile(path.join(root, 'index.html'), 'utf8');
   assert.match(index, /type="module"/);
-  assert.doesNotMatch(index, /__NEXT_DATA__|self\.__next_f/);
+  assert.doesNotMatch(index + app, /__NEXT_DATA__|self\.__next_f/);
 });
 ```
 
-- [ ] **Step 5: Generate deterministic component registry**
+- [ ] **Step 4: Implement deterministic component registry and runtime**
 
-`components/registry.js` exports pure render functions keyed by M01 ids:
+`components/registry.js` must export an object keyed by M01 component ids. M02 uses template strings; do not introduce a virtual DOM.
 
-```js
-export const components = {
-  'cmp-project-hero': ({ markup }) => markup,
-  'cmp-footer': ({ markup }) => markup,
-};
-```
+`app.js` must:
 
-For M02, markup may remain template strings. Do not introduce a custom virtual DOM.
+1. import registry/data;
+2. select `?page=<pageId>` or representative default;
+3. replace `data-aspirator-component` placeholders;
+4. preserve local generated navigation;
+5. post `{ type: 'aspirator:navigate', route }` when embedded.
 
-- [ ] **Step 6: Generate runtime composition**
-
-`app.js` loads `data/archetype.json`, chooses the page from `?page=<pageId>` or the representative default, replaces `data-aspirator-component` placeholders, restores supported local navigation, and posts `aspirator:navigate` when embedded.
-
-- [ ] **Step 7: Run tests**
+- [ ] **Step 5: Run Task 5 tests**
 
 Run: `node --test test/rebuild/data-extractor.test.mjs test/rebuild/runtime-builder.test.mjs`
 
 Expected: PASS.
 
-- [ ] **Step 8: Commit**
+- [ ] **Step 6: Commit**
 
 ```bash
 git add src/rebuild/data-extractor.mjs src/rebuild/runtime-builder.mjs test/rebuild
- git commit -m "feat(m02): extract archetype data and build vanilla runtime"
+git commit -m "feat(m02): extract archetype data and build vanilla runtime"
 ```
 
 ---
 
-### Task 6: Fidelity Verifier + Atomic Reconstruction Orchestrator
+### Task 6: Fidelity Verifier + Atomic Rebuild Orchestrator
 
 **Files:**
 - Create: `src/rebuild/verifier.mjs`
-- Create: `src/rebuild/rebuild-archetype.mjs`
 - Create: `src/rebuild/rebuild-store.mjs`
+- Create: `src/rebuild/rebuild-archetype.mjs`
 - Create: `test/rebuild/verifier.test.mjs`
 - Create: `test/rebuild/rebuild-archetype.test.mjs`
 
 **Interfaces:**
-- Produces: `verifyRebuild({ domainDir, rebuildRoot, manifest, sourceSnapshot })`
-- Produces: `rebuildArchetype({ domainDir, archetypeId, options? })`
-- Returns canonical `rebuild-manifest.json` data.
-- Produces: `readRebuildManifest(exportsDir, domain, archetypeId)` and `readRebuildReport(...)`.
+- Produces: `verifyRebuild({ domainDir, rebuildRoot, manifest, sourceHashes }) -> fidelityReport`.
+- Produces: `rebuildArchetype({ domainDir, archetypeId }) -> rebuildManifest`.
+- Produces: `readRebuildManifest(exportsDir, domain, archetypeId)` and `readRebuildReport(exportsDir, domain, archetypeId)`.
 
-- [ ] **Step 1: Write verifier RED test**
+- [ ] **Step 1: Write verifier tests against an explicit small generated tree**
 
 ```js
-test('verifier fails broken local references and passes intact output', async () => {
-  const report = await verifyRebuild({...fixtureArgs});
+import fs from 'fs/promises';
+import os from 'os';
+import path from 'node:path';
+import { verifyRebuild } from '../../src/rebuild/verifier.mjs';
+
+test('verifier reports zero broken references for intact output', async () => {
+  const rebuildRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'aspirator-verify-'));
+  await fs.mkdir(path.join(rebuildRoot, 'assets'), { recursive: true });
+  await fs.writeFile(path.join(rebuildRoot, 'assets', 'hero.jpg'), 'x');
+  await fs.writeFile(path.join(rebuildRoot, 'index.html'), '<img src="assets/hero.jpg">');
+  const report = await verifyRebuild({
+    domainDir: rebuildRoot,
+    rebuildRoot,
+    manifest: { componentIds: [], generatedFiles: ['index.html', 'assets/hero.jpg'] },
+    sourceHashes: {},
+  });
   assert.equal(report.status, 'pass');
   assert.equal(report.metrics.brokenLinks, 0);
 });
 ```
 
-Add a missing image fixture and assert `status === 'fail'` with an `ASSET_UNRESOLVED`-classified issue.
+Add a second test with `src="assets/missing.jpg"` and assert `status === 'fail'` and `metrics.brokenLinks === 1`.
 
-- [ ] **Step 2: Implement deterministic checks**
+- [ ] **Step 2: Implement required deterministic checks**
 
-Checks must cover exactly:
+The report must contain named checks:
 
 ```js
 {
@@ -646,25 +747,34 @@ Checks must cover exactly:
 }
 ```
 
-Capture hashes of source evidence before generation and compare after generation.
+Capture hashes for source page HTML, page data and system manifest before generation. Compare after generation.
 
-- [ ] **Step 3: Write orchestrator RED test**
+- [ ] **Step 3: Write orchestrator RED test using a copied fixture**
 
 ```js
-test('rebuildArchetype publishes only verified staging output', async () => {
-  const manifest = await rebuildArchetype({ domainDir: fixture, archetypeId });
+import fs from 'fs/promises';
+import path from 'node:path';
+import { copyMiniSiteFixture } from '../helpers/copy-fixture.mjs';
+import { compileSiteSystem } from '../../src/compiler/compile-site.mjs';
+import { rebuildArchetype } from '../../src/rebuild/rebuild-archetype.mjs';
+
+test('rebuildArchetype publishes verified staging output', async () => {
+  const domainDir = await copyMiniSiteFixture();
+  const system = await compileSiteSystem({ exportDir: domainDir, write: true });
+  const archetype = system.archetypes.find((item) => item.pageIds.length > 1);
+  assert.ok(archetype);
+  const manifest = await rebuildArchetype({ domainDir, archetypeId: archetype.id });
   assert.equal(manifest.verification.status, 'pass');
-  assert.ok(await exists(path.join(fixture, 'rebuild', archetypeId, 'index.html')));
-  assert.equal(await exists(path.join(fixture, 'rebuild', '.staging', archetypeId)), false);
+  await fs.access(path.join(domainDir, 'rebuild', archetype.id, 'index.html'));
+  await assert.rejects(fs.access(path.join(domainDir, 'rebuild', '.staging', archetype.id)));
 });
 ```
 
-- [ ] **Step 4: Implement orchestration pipeline**
-
-Exact order:
+- [ ] **Step 4: Implement exact orchestration order**
 
 ```text
 resolve source
+→ hash source evidence
 → clean DOM
 → slice components
 → extract compatible page data
@@ -673,12 +783,14 @@ resolve source
 → build runtime in staging
 → write preliminary manifest
 → verify staging
-→ write fidelity report
-→ if pass: atomically replace published rebuild
-→ if fail: retain last good published rebuild, return VERIFY_FAILED
+→ write reports/fidelity.json
+→ PASS: atomically publish staging as rebuild root
+→ FAIL: preserve previous published rebuild and throw VERIFY_FAILED
 ```
 
-- [ ] **Step 5: Implement rebuild manifest**
+Use `fs.rename()` only within the same domain export filesystem. If an existing good rebuild exists, rename it to a temporary backup, publish staging, then delete backup; restore backup if publish fails.
+
+- [ ] **Step 5: Emit canonical manifest**
 
 ```js
 {
@@ -700,9 +812,9 @@ resolve source
 }
 ```
 
-Do not include nondeterministic timestamps in identities or filenames.
+Do not place timestamps in ids, filenames or hash inputs.
 
-- [ ] **Step 6: Run all core tests**
+- [ ] **Step 6: Run compiler + rebuild core tests**
 
 Run: `node --test test/compiler/*.test.mjs test/rebuild/*.test.mjs`
 
@@ -712,7 +824,7 @@ Expected: PASS.
 
 ```bash
 git add src/rebuild test/rebuild
- git commit -m "feat(m02): orchestrate verified atomic archetype rebuilds"
+git commit -m "feat(m02): orchestrate verified atomic archetype rebuilds"
 ```
 
 ---
@@ -729,7 +841,7 @@ git add src/rebuild test/rebuild
 - Create: `test/api/rebuild-mcp.test.mjs`
 
 **Interfaces:**
-- CLI: `npm run rebuild -- <domain-export-dir> <archetypeId>`
+- CLI: `npm run rebuild -- <domain-export-dir> <archetypeId>`.
 - HTTP:
   - `POST /api/results/:domain/system/rebuild/archetypes/:archetypeId`
   - `GET /api/results/:domain/system/rebuild/archetypes/:archetypeId`
@@ -740,19 +852,18 @@ git add src/rebuild test/rebuild
   - `get_rebuild_manifest`
   - `get_rebuild_report`
 
-- [ ] **Step 1: Write HTTP contract RED test**
+- [ ] **Step 1: Write HTTP route registration RED test**
+
+Follow the existing M01 route-capture pattern in `test/api/system-api.test.mjs` and assert these exact additions:
 
 ```js
-test('system HTTP registers non-conflicting M02 rebuild routes', () => {
-  const routes = collectRegisteredRoutes();
-  assert.ok(routes.includes('POST /api/results/:domain/system/rebuild/archetypes/:archetypeId'));
-  assert.ok(routes.includes('GET /api/results/:domain/system/rebuild/archetypes/:archetypeId/preview'));
-});
+assert.ok(routes.includes('POST /api/results/:domain/system/rebuild/archetypes/:archetypeId'));
+assert.ok(routes.includes('GET /api/results/:domain/system/rebuild/archetypes/:archetypeId'));
+assert.ok(routes.includes('GET /api/results/:domain/system/rebuild/archetypes/:archetypeId/preview'));
+assert.ok(routes.includes('GET /api/results/:domain/system/rebuild/archetypes/:archetypeId/report'));
 ```
 
-- [ ] **Step 2: Implement HTTP facade with error mapping**
-
-Map:
+- [ ] **Step 2: Implement HTTP facade with fixed error mapping**
 
 ```js
 const statusByCode = {
@@ -766,46 +877,48 @@ const statusByCode = {
 };
 ```
 
-Use `res.sendFile()` only after resolving manifest-declared paths through safe rebuild helpers.
+`preview` serves only the manifest-declared `index.html` resolved through rebuild path helpers. `report` returns parsed `reports/fidelity.json`.
 
-- [ ] **Step 3: Write MCP RED test**
+- [ ] **Step 3: Write MCP RED test with required names**
 
 ```js
-test('M02 registers exactly three reconstruction tools', () => {
-  const names = registeredToolNames();
-  assert.deepEqual(names.filter((name) => name.includes('rebuild')), [
-    'rebuild_archetype',
-    'get_rebuild_manifest',
-    'get_rebuild_report',
-  ]);
-});
+const required = new Set([
+  'rebuild_archetype',
+  'get_rebuild_manifest',
+  'get_rebuild_report',
+]);
+for (const name of required) assert.ok(names.includes(name), `missing ${name}`);
 ```
-
-The assertion may use an explicit required-name set rather than substring filtering if legacy names overlap.
 
 - [ ] **Step 4: Implement MCP tools**
 
-`rebuild_archetype` is write-capable but non-destructive to source evidence:
+`rebuild_archetype`:
 
 ```js
 annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false }
 ```
 
-Manifest/report getters are read-only.
+Manifest/report getters:
 
-- [ ] **Step 5: Add CLI script**
+```js
+annotations: { readOnlyHint: true, openWorldHint: false }
+```
+
+- [ ] **Step 5: Add the CLI**
+
+`package.json`:
 
 ```json
 "rebuild": "node src/rebuild-cli.mjs"
 ```
 
-CLI usage must exit non-zero on failure and print the manifest path on success.
+`src/rebuild-cli.mjs` must require exactly two positional arguments after Node/script, exit `1` with usage text when missing, call `rebuildArchetype()`, and print the published manifest path on success.
 
-- [ ] **Step 6: Update MCP integration expected registry**
+- [ ] **Step 6: Update MCP integration to 20 required named tools**
 
-M01 had 17 required tools. M02 adds 3, so the integration test must verify the 20 named required tools instead of relying only on count.
+Keep the existing 17 required names and append the 3 M02 names. Verify names, not count alone.
 
-- [ ] **Step 7: Run API/MCP tests**
+- [ ] **Step 7: Run API + MCP contract tests**
 
 Run: `node --test test/api/*.test.mjs`
 
@@ -815,7 +928,7 @@ Expected: PASS.
 
 ```bash
 git add src/rebuild-cli.mjs src/system-http.mjs src/system-mcp.mjs src/test-mcp.mjs package.json test/api
- git commit -m "feat(m02): expose archetype rebuild over CLI HTTP and MCP"
+git commit -m "feat(m02): expose archetype rebuild over CLI HTTP and MCP"
 ```
 
 ---
@@ -831,13 +944,17 @@ git add src/rebuild-cli.mjs src/system-http.mjs src/system-mcp.mjs src/test-mcp.
 - Create: `test/api/explorer-contract.test.mjs`
 
 **Interfaces:**
-- UI modes: `original | rebuilt`
-- Action: `buildSelectedArchetype()`
-- Preview source: original M01 preview or M02 rebuild preview.
+- UI preview modes: `original | rebuilt`.
+- `Build` is enabled only for selected archetypes in M02.
+- Rebuilt preview URL: `/api/results/:domain/system/rebuild/archetypes/:archetypeId/preview?page=:pageId`.
 
 - [ ] **Step 1: Write static Explorer contract RED test**
 
 ```js
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import fs from 'fs/promises';
+
 test('Explorer exposes Original Build and Rebuilt controls', async () => {
   const html = await fs.readFile('public/system-explorer.html', 'utf8');
   assert.match(html, /data-preview-mode="original"/);
@@ -846,9 +963,7 @@ test('Explorer exposes Original Build and Rebuilt controls', async () => {
 });
 ```
 
-- [ ] **Step 2: Add mode controls**
-
-Markup:
+- [ ] **Step 2: Add exact controls**
 
 ```html
 <div id="rebuild-controls" class="rebuild-controls">
@@ -870,50 +985,34 @@ let state = {
 };
 ```
 
-Only archetype selection enables Build in M02 primary flow.
+- [ ] **Step 4: Implement Build action for selected archetype**
 
-- [ ] **Step 4: Implement Build action**
-
-POST to:
+POST:
 
 ```js
-`/api/results/${encodeURIComponent(domain)}/system/rebuild/archetypes/${encodeURIComponent(archetypeId)}`
+`/api/results/${encodeURIComponent(state.domain)}/system/rebuild/archetypes/${encodeURIComponent(state.selection.value.id)}`
 ```
 
-On success, cache manifest, enable rebuilt preview, render verification status in inspector.
+On success store the manifest in `state.rebuilds`, enable rebuilt preview and render verification data.
 
-- [ ] **Step 5: Extend preview switching**
+- [ ] **Step 5: Implement preview switching without replacing original evidence**
 
-Original remains:
+Original page preview keeps current M01 behavior. Rebuilt preview uses the M02 endpoint and labels the center pane `REBUILT`; switching back must restore `ORIGINAL` immediately.
 
-```text
-/api/results/:domain/system/preview/:pageId
-```
-
-Rebuilt becomes:
-
-```text
-/api/results/:domain/system/rebuild/archetypes/:archetypeId/preview?page=:pageId
-```
-
-Clearly label the center pane `ORIGINAL` or `REBUILT`.
-
-- [ ] **Step 6: Inspector report**
+- [ ] **Step 6: Extend inspector with factual rebuild fields**
 
 Show:
 
 - verification status;
-- generated output path;
-- resolved/expected components;
-- referenced/resolved assets;
-- unresolved dependencies;
-- link/button to fidelity JSON.
+- archetype id;
+- resolved component count and expected count;
+- resolved/referenced asset count;
+- unresolved dependency count;
+- button/link to report endpoint.
 
-Do not show a percentage visual fidelity score in M02.
+Do not show a visual-fidelity percentage.
 
-- [ ] **Step 7: Run tests and syntax checks**
-
-Run:
+- [ ] **Step 7: Run static/syntax checks**
 
 ```bash
 node --test test/api/explorer-contract.test.mjs
@@ -928,131 +1027,139 @@ Expected: PASS.
 
 ```bash
 git add public test/api/explorer-contract.test.mjs
- git commit -m "feat(m02): add original and rebuilt Explorer workflow"
+git commit -m "feat(m02): add original and rebuilt Explorer workflow"
 ```
 
 ---
 
-### Task 9: CI Gate + Brand Appart Project Detail Certification
+### Task 9: General CI Gate + Brand Appart Project Detail Certification
 
 **Files:**
-- Modify: `.github/workflows/m01-ci.yml` or rename/create a general workflow such as `.github/workflows/verify.yml`
-- Create: `docs/m02-brandappart-certification.md`
-- Modify: `README.md` only if current project documentation has a usage section appropriate for `npm run rebuild`
+- Create: `.github/workflows/verify.yml`
+- Delete after replacement is confirmed: `.github/workflows/m01-ci.yml`
+- Create only after running certification: `docs/m02-brandappart-certification.md`
 
 **Interfaces:**
-- Required CI: syntax, full unit/contracts, server readiness, MCP registry 20 named tools.
-- Certification command: `npm run compile -- <brandappart-export-dir>` then `npm run rebuild -- <brandappart-export-dir> <project-detail-archetype-id>`.
+- CI runs syntax checks, `npm test`, real server readiness, and MCP integration with 20 required named tools.
+- Brand Appart certification runs locally against the provided 40-page capture and records only observed results.
 
-- [ ] **Step 1: Generalize CI syntax list**
+- [ ] **Step 1: Create general verification workflow before deleting M01-specific workflow**
 
-CI must include at least:
+The new workflow must run on PRs to `main` and pushes to `feat/**` branches. Required commands:
 
 ```bash
+npm ci
+node --check src/server.mjs
 node --check src/rebuild/rebuild-archetype.mjs
 node --check src/rebuild/runtime-builder.mjs
 node --check src/rebuild/verifier.mjs
 node --check src/rebuild-cli.mjs
+npm test
 ```
 
-- [ ] **Step 2: Run the full automated suite**
+Then start the server, wait for `http://127.0.0.1:3000/`, and run `npm run test:mcp`.
+
+- [ ] **Step 2: Run the full suite locally or in the execution environment**
 
 Run: `npm test`
 
-Expected: all M01 + M02 tests PASS, zero failures.
+Expected: all M01 + M02 tests PASS with zero failures.
 
 - [ ] **Step 3: Run real server + MCP smoke**
 
 ```bash
 npm run dev > /tmp/aspirator-server.log 2>&1 &
 SERVER_PID=$!
-# wait for http://127.0.0.1:3000/
+for attempt in {1..20}; do
+  curl --fail --silent http://127.0.0.1:3000/ >/dev/null && break
+  sleep 1
+done
 npm run test:mcp
 kill $SERVER_PID
 ```
 
-Expected: MCP initialize HTTP 200 and 20 required named legacy + M01 + M02 tools present.
+Expected: initialize HTTP 200 and all 20 required legacy + M01 + M02 tool names present.
 
-- [ ] **Step 4: Run Brand Appart calibration against the real captured export**
+- [ ] **Step 4: Run Brand Appart certification on the real export**
 
-Procedure:
+Use the actual extracted Brand Appart domain directory as `BRANDAPPART_EXPORT` and execute:
+
+```bash
+npm run compile -- "$BRANDAPPART_EXPORT"
+```
+
+Read `system/archetypes.json`, choose the actual Project Detail archetype by its page membership/label, then run:
+
+```bash
+npm run rebuild -- "$BRANDAPPART_EXPORT" "$PROJECT_DETAIL_ARCHETYPE_ID"
+```
+
+Open the result through Aspirator's rebuilt preview endpoint, not `file://`.
+
+- [ ] **Step 5: Verify certification requirements from generated evidence**
+
+Check all of these directly from `rebuild-manifest.json`, `reports/fidelity.json`, and the source directories:
 
 ```text
-1. compile the 40-page export with M01 v1.1;
-2. identify the Project Detail archetype by representative/page family;
-3. rebuild its representative page;
-4. verify all local references;
-5. verify expected component ids are resolved or explicitly residual;
-6. verify source evidence hashes unchanged;
-7. open rebuilt preview through the Aspirator server;
-8. generate one additional compatible Project Detail page via shared runtime/data;
-9. save fidelity.json and rebuild-manifest.json evidence.
+Project Detail archetype identified
+representative page rebuilt
+at least one additional compatible Project Detail page available through shared runtime/data
+all required local references resolved or exact misses reported
+component ids trace back to M01 ids
+source evidence hashes unchanged
+fidelity report status PASS
+human rebuilt preview reviewed
 ```
 
-- [ ] **Step 5: Record certification facts only**
+- [ ] **Step 6: Write certification document using only values observed in Step 5**
 
-`docs/m02-brandappart-certification.md` must record actual observed values, for example:
+Create `docs/m02-brandappart-certification.md` only after the run. Record the exact run date, source page count, rebuilt page count, component expected/resolved counts, asset referenced/resolved counts, broken local reference count, source-integrity result, human preview result, and any exact unresolved items. Do not insert guessed or pre-filled numbers.
 
-```markdown
-- Source pages in Project Detail archetype: <actual>
-- Pages rebuilt successfully: <actual>
-- Components expected/resolved: <actual>/<actual>
-- Assets referenced/resolved: <actual>/<actual>
-- Broken local references: <actual>
-- Source integrity: PASS/FAIL
-- Human preview result: reviewed / needs follow-up
-```
+- [ ] **Step 7: Remove the old M01-only CI workflow after the new workflow passes once on the branch**
 
-Do not pre-fill numbers before running the certification.
+Delete `.github/workflows/m01-ci.yml` only after `verify.yml` has produced a successful run with equivalent M01 checks plus M02 checks.
 
-- [ ] **Step 6: Open draft PR only after local/core evidence is green**
+- [ ] **Step 8: Open a draft PR**
 
-PR title:
+Title:
 
 ```text
 M02 — Reconstruction Compiler
 ```
 
-PR body must include:
+PR body must include deterministic scope, site-system v1.1 compatibility, generated output contract, automated test evidence, Brand Appart certification evidence, known limitations, and current dependency-audit findings.
 
-- deterministic scope;
-- site-system v1.1 compatibility change;
-- generated output contract;
-- automated test evidence;
-- Brand Appart certification evidence;
-- known limitations and dependency-audit status.
+- [ ] **Step 9: Keep the PR draft until CI and review are clean**
 
-- [ ] **Step 7: Wait for GitHub Actions and fix all Critical/Important review findings before Ready**
+Do not mark Ready or merge while required CI is red or while Critical/Important review findings remain unresolved.
 
-Do not mark ready or merge while required CI is red.
-
-- [ ] **Step 8: Final commit if documentation/CI changed after certification**
+- [ ] **Step 10: Commit certification/CI changes**
 
 ```bash
-git add .github docs README.md
- git commit -m "test(m02): certify reconstruction compiler on Brand Appart"
+git add .github docs
+git commit -m "test(m02): certify reconstruction compiler on Brand Appart"
 ```
 
 ---
 
 ## Final Acceptance Gate
 
-M02 may be called complete only when all are true:
+M02 may be called complete only when every item is true:
 
 ```text
 [ ] site-system v1.1 emitted and v1.0 fallback tested
-[ ] component locators deterministic and tested
-[ ] Project Detail representative page rebuilt through one public API
+[ ] deterministic component locators tested
+[ ] Project Detail representative page rebuilt through one public compiler API
 [ ] generated output served without source Next/React runtime
-[ ] components reference M01 component ids
+[ ] generated components reference M01 component ids
 [ ] local CSS/assets resolve deterministically
-[ ] at least two compatible archetype pages share the runtime/data model
-[ ] original crawl/system evidence unchanged
+[ ] at least two compatible archetype pages share one runtime/data model
+[ ] original crawl/system evidence remains unchanged
 [ ] fidelity report passes with zero broken local references
 [ ] Explorer switches Original ↔ Rebuilt
 [ ] HTTP + MCP + CLI reconstruction access works
-[ ] MCP required registry contains 20 named tools
-[ ] Brand Appart Project Detail certification recorded with real values
+[ ] MCP integration verifies 20 required named tools
+[ ] Brand Appart Project Detail certification records real observed values
 [ ] GitHub Actions PASS on the PR head
 ```
 
