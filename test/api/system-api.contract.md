@@ -3,13 +3,15 @@
 HTTP:
 - `POST /api/results/:domain/compile`
 - `GET /api/results/:domain/system`
-- `GET /api/results/:domain/pages`
-- `GET /api/results/:domain/pages/:pageId`
-- `GET /api/results/:domain/archetypes`
-- `GET /api/results/:domain/archetypes/:archetypeId`
-- `GET /api/results/:domain/components`
-- `GET /api/results/:domain/components/:componentId`
-- `GET /api/results/:domain/preview/:pageId`
+- `GET /api/results/:domain/system/pages`
+- `GET /api/results/:domain/system/pages/:pageId`
+- `GET /api/results/:domain/system/archetypes`
+- `GET /api/results/:domain/system/archetypes/:archetypeId`
+- `GET /api/results/:domain/system/components`
+- `GET /api/results/:domain/system/components/:componentId`
+- `GET /api/results/:domain/system/preview/:pageId`
+
+The `/system/...` namespace is intentional: Funnel Aspirator already exposes legacy `/api/results/:domain/components`, motion and interaction endpoints, which must remain backward compatible.
 
 MCP:
 - `compile_site_system`
