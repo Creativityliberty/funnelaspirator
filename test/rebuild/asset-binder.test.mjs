@@ -26,6 +26,24 @@ test('asset binder copies local assets and never fetches external resources', as
   }
 });
 
+test('asset binder resolves captured ../assets references inside the export root', async () => {
+  const rebuildRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'aspirator-assets-parent-'));
+  try {
+    const result = await bindAssets({
+      references: ['../assets/hero.jpg'],
+      sourceRoot,
+      rebuildRoot,
+      assetRegistry: [],
+    });
+    assert.equal(result.unresolved.length, 0);
+    assert.equal(result.assets.length, 1);
+    assert.ok(result.rewrites['../assets/hero.jpg']);
+    await fs.access(path.join(rebuildRoot, result.assets[0].target));
+  } finally {
+    await fs.rm(rebuildRoot, { recursive: true, force: true });
+  }
+});
+
 test('asset binder reports missing local resources instead of inventing them', async () => {
   const rebuildRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'aspirator-assets-missing-'));
   try {
