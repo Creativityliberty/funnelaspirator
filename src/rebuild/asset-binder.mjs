@@ -5,6 +5,8 @@ import { assertInsideRoot } from '../compiler/schema.mjs';
 
 const EXTERNAL = /^(?:https?:|data:|blob:|\/\/)/i;
 const FONT_EXT = /\.(?:woff2?|ttf|otf)(?:$|[?#])/i;
+const NEXT_IMAGE_OPTIMIZER = /^\/?_next\/image\?/i;
+const CAPTURED_ASSET_PARENT = /^(?:\.\.\/)+assets\//;
 
 function stripQuery(value = '') {
   return String(value).split('#')[0].split('?')[0];
@@ -14,12 +16,24 @@ function portable(value) {
   return String(value).split(path.sep).join('/');
 }
 
+function capturedAssetPath(value = '') {
+  const clean = String(value).replaceAll('\\', '/');
+  return CAPTURED_ASSET_PARENT.test(clean)
+    ? clean.replace(/^(?:\.\.\/)+/, '')
+    : null;
+}
+
 function registryCandidate(reference, assetRegistry) {
   const clean = stripQuery(reference).replace(/^\//, '');
+  const captured = capturedAssetPath(clean);
   return (assetRegistry || []).find((asset) => {
     const pathValue = String(asset?.path || '').replace(/^\//, '');
     const sourceValue = String(asset?.source || asset?.url || '').replace(/^\//, '');
-    return pathValue === clean || sourceValue === reference || sourceValue === clean;
+    return pathValue === clean
+      || (captured && pathValue === captured)
+      || sourceValue === reference
+      || sourceValue === clean
+      || (captured && sourceValue === captured);
   });
 }
 
@@ -28,10 +42,12 @@ async function resolveLocalReference(sourceRoot, reference, assetRegistry) {
   const fromRegistry = registryCandidate(reference, assetRegistry);
   const candidates = [];
   if (fromRegistry?.path) candidates.push(fromRegistry.path);
+  const captured = capturedAssetPath(clean);
+  if (captured) candidates.push(captured);
   if (clean.startsWith('/')) candidates.push(clean.slice(1));
   else candidates.push(clean);
 
-  for (const relative of candidates) {
+  for (const relative of [...new Set(candidates)]) {
     try {
       const absolute = assertInsideRoot(sourceRoot, path.join(sourceRoot, relative));
       const stat = await fs.stat(absolute);
@@ -61,6 +77,7 @@ export async function bindAssets({ references = [], sourceRoot, rebuildRoot, ass
   for (const rawReference of references || []) {
     const reference = String(rawReference || '').trim();
     if (!reference || reference.startsWith('#')) continue;
+    if (NEXT_IMAGE_OPTIMIZER.test(reference)) continue;
     if (EXTERNAL.test(reference)) {
       external.push(reference);
       continue;
