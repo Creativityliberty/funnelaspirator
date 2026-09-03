@@ -34,3 +34,30 @@ test('cleaner removes captured Next image optimizer srcsets while keeping local 
   assert.doesNotMatch(result.html, /srcset=/i);
   assert.match(result.html, /src="\.\.\/assets\/www\.example\.com\/_next\/image-local\.jpg"/);
 });
+
+test('cleaner removes non-functional source hints, tracker noscript and hidden tracking pixels', () => {
+  const result = cleanRebuildDocument({ html: `
+    <html>
+      <head>
+        <link rel="preload" href="/_next/static/chunks/runtime.js" as="script">
+        <link rel="modulepreload" href="/_next/static/chunks/app.js">
+        <link rel="icon" href="/icon.png">
+        <link rel="apple-touch-icon" href="/apple-icon.png">
+        <link rel="stylesheet" href="./site.css">
+      </head>
+      <body>
+        <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-X"></iframe></noscript>
+        <noscript><img src="https://www.facebook.com/tr?id=1&noscript=1" width="1" height="1"></noscript>
+        <img src="../assets/app.citeme.io/api/beacon/demo/pixel" width="1" height="1" style="position:absolute;width:0;height:0;overflow:hidden">
+        <img src="../assets/site/hero.jpg" width="800" height="600" alt="Hero">
+      </body>
+    </html>
+  ` });
+
+  assert.doesNotMatch(result.html, /rel="(?:preload|modulepreload|icon|apple-touch-icon)"/i);
+  assert.doesNotMatch(result.html, /googletagmanager|facebook\.com\/tr|citeme\.io/i);
+  assert.match(result.html, /rel="stylesheet" href="\.\/site\.css"/);
+  assert.match(result.html, /src="\.\.\/assets\/site\/hero\.jpg"/);
+  assert.ok(result.removed.hints >= 4);
+  assert.ok(result.removed.trackers >= 3);
+});
