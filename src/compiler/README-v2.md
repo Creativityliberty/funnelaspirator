@@ -1,0 +1,1 @@
+Brand Appart calibration: derive components from captured HTML when JSON has no components array, use data.ctas/forms in page signatures, and route family only as secondary clustering evidence.
