@@ -1,3 +1,4 @@
+import crypto from 'crypto';
 import * as cheerio from 'cheerio';
 
 function slugRole(value) {
@@ -7,6 +8,73 @@ function slugRole(value) {
     .replace(/[^a-z0-9-]+/g, '-')
     .replace(/-+/g, '-')
     .replace(/^-|-$/g, '');
+}
+
+function normalizedClasses(value = '') {
+  return String(value).split(/\s+/).filter(Boolean).sort();
+}
+
+function safeToken(value) {
+  return /^[A-Za-z_][A-Za-z0-9_-]*$/.test(value);
+}
+
+function escapeAttributeValue(value) {
+  return String(value).replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+}
+
+function selectorFor(tag, className) {
+  const classes = normalizedClasses(className);
+  if (!classes.length) return tag || '*';
+  return classes.reduce((selector, classToken) => {
+    if (safeToken(classToken)) return `${selector}.${classToken}`;
+    return `${selector}[class~="${escapeAttributeValue(classToken)}"]`;
+  }, tag || '*');
+}
+
+function idSelector(id) {
+  if (safeToken(id)) return `#${id}`;
+  return `[id="${escapeAttributeValue(id)}"]`;
+}
+
+function elementFingerprint($, element) {
+  const node = $(element);
+  const parent = node.parent();
+  const payload = {
+    tag: String(element?.tagName || element?.name || '').toLowerCase(),
+    id: node.attr('id') || '',
+    classes: normalizedClasses(node.attr('class') || ''),
+    parentTag: parent.get(0)?.tagName || parent.get(0)?.name || '',
+    parentClasses: normalizedClasses(parent.attr('class') || ''),
+    siblingIndex: node.index(),
+  };
+  return crypto.createHash('sha1').update(JSON.stringify(payload)).digest('hex').slice(0, 12);
+}
+
+export function buildElementLocator($, element) {
+  const node = $(element);
+  const id = node.attr('id') || '';
+  const fingerprint = elementFingerprint($, element);
+
+  if (id) {
+    const matches = $('[id]').filter((_i, candidate) => $(candidate).attr('id') === id);
+    if (matches.length === 1) {
+      return { strategy: 'id', selector: idSelector(id), ordinal: 0, fingerprint };
+    }
+  }
+
+  const tag = String(element?.tagName || element?.name || '').toLowerCase();
+  const selector = selectorFor(tag, node.attr('class') || '');
+  let matches = [];
+  try {
+    matches = $(selector).toArray();
+  } catch {
+    return { strategy: 'structural', selector: null, ordinal: 0, fingerprint };
+  }
+  const ordinal = matches.indexOf(element);
+  if (ordinal >= 0) {
+    return { strategy: 'selector-ordinal', selector, ordinal, fingerprint };
+  }
+  return { strategy: 'structural', selector: null, ordinal: 0, fingerprint };
 }
 
 export function inferComponentRole({ tag = '', className = '', id = '' } = {}) {
@@ -71,6 +139,7 @@ function componentFromElement($, element) {
     role: inferComponentRole({ tag, className, id }),
     className,
     id: id || null,
+    locator: buildElementLocator($, element),
   };
 }
 
@@ -83,6 +152,7 @@ function dedupeConsecutive(components) {
       && previous.role === component.role
       && previous.tag === component.tag
       && previous.className === component.className
+      && previous.locator?.fingerprint === component.locator?.fingerprint
     ) continue;
     output.push(component);
   }
@@ -149,5 +219,6 @@ export function deriveComponentsFromSections(sections) {
     className: section?.className || '',
     id: section?.id || null,
     heading: section?.heading || null,
+    locator: null,
   }));
 }
