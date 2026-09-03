@@ -1,3 +1,4 @@
+import fs from 'fs/promises';
 import path from 'path';
 import { compileSiteSystem } from './compiler/compile-site.mjs';
 import { readCompiledSystem, resolveDomainDir, findById } from './compiler/system-store.mjs';
@@ -18,6 +19,19 @@ function statusFor(error) {
     VERIFY_FAILED: 422,
   };
   return statusByCode[error?.code] || 400;
+}
+
+function escapeAttribute(value = '') {
+  return String(value).replace(/&/g, '&amp;').replace(/"/g, '&quot;');
+}
+
+export function injectRebuildBaseHref(html, { domain, archetypeId } = {}) {
+  const baseHref = `/exports/${encodeURIComponent(String(domain || ''))}/rebuild/${encodeURIComponent(String(archetypeId || ''))}/`;
+  const tag = `<base href="${escapeAttribute(baseHref)}">`;
+  const source = String(html || '');
+  if (/<base\b[^>]*>/i.test(source)) return source.replace(/<base\b[^>]*>/i, tag);
+  if (/<head\b[^>]*>/i.test(source)) return source.replace(/<head\b[^>]*>/i, (head) => `${head}${tag}`);
+  return `${tag}${source}`;
 }
 
 export function registerSystemRoutes(app, { exportsDir }) {
@@ -114,7 +128,11 @@ export function registerSystemRoutes(app, { exportsDir }) {
       }
       const domainDir = resolveDomainDir(exportsDir, req.params.domain);
       const { rebuildRoot } = resolveRebuildPaths(domainDir, req.params.archetypeId);
-      res.sendFile(path.resolve(rebuildRoot, 'index.html'));
+      const indexHtml = await fs.readFile(path.resolve(rebuildRoot, 'index.html'), 'utf8');
+      res.type('html').send(injectRebuildBaseHref(indexHtml, {
+        domain: req.params.domain,
+        archetypeId: req.params.archetypeId,
+      }));
     } catch (error) {
       res.status(statusFor(error)).json({ success: false, code: error?.code || null, error: error.message });
     }
