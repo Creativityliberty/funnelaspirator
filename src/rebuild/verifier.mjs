@@ -7,6 +7,7 @@ import { assertInsideRoot } from '../compiler/schema.mjs';
 const EXTERNAL = /^(?:https?:|data:|blob:|mailto:|tel:|javascript:|\/\/|#)/i;
 const TRACKING = /googletagmanager|google-analytics|facebook\.(?:net|com)|posthog|segment\.com|citeme\.io|visitors\.now|clarity\.ms|hotjar|plausible\.io|self\.__next_f|__NEXT_DATA__/i;
 const FONT_EXT = /\.(?:woff2?|ttf|otf)(?:$|[?#])/i;
+const VIRTUAL_NEXT_IMAGE = /\/_next\/image\?/gi;
 
 async function exists(file) {
   try {
@@ -126,6 +127,23 @@ async function verifySourceHashes(domainDir, sourceHashes) {
   return mismatches;
 }
 
+async function scanGeneratedText(rebuildRoot, generatedFiles) {
+  let trackingFound = false;
+  let virtualAssetReferences = 0;
+
+  for (const relative of generatedFiles || []) {
+    if (!/\.(?:html|css|js|mjs|json)$/i.test(relative)) continue;
+    const file = path.join(rebuildRoot, relative);
+    if (!(await exists(file))) continue;
+    const text = await fs.readFile(file, 'utf8');
+    if (TRACKING.test(text)) trackingFound = true;
+    const matches = text.match(VIRTUAL_NEXT_IMAGE);
+    if (matches) virtualAssetReferences += matches.length;
+  }
+
+  return { trackingFound, virtualAssetReferences };
+}
+
 export async function verifyRebuild({ domainDir, rebuildRoot, manifest = {}, sourceHashes = {} } = {}) {
   const domain = path.resolve(domainDir);
   const root = path.resolve(rebuildRoot);
@@ -153,25 +171,18 @@ export async function verifyRebuild({ domainDir, rebuildRoot, manifest = {}, sou
   const registry = registryPath && await exists(registryPath) ? await fs.readFile(registryPath, 'utf8') : '';
   const expectedComponents = [...new Set(manifest.componentIds || [])];
   const missingComponents = expectedComponents.filter((id) => !registry.includes(JSON.stringify(id)) && !registry.includes(`'${id}'`));
-
-  let trackingFound = false;
-  for (const relative of manifest.generatedFiles || []) {
-    if (!/\.(?:html|js|mjs|json)$/i.test(relative)) continue;
-    const file = path.join(root, relative);
-    if (!(await exists(file))) continue;
-    if (TRACKING.test(await fs.readFile(file, 'utf8'))) {
-      trackingFound = true;
-      break;
-    }
-  }
+  const generatedScan = isolated
+    ? await scanGeneratedText(root, manifest.generatedFiles || [])
+    : { trackingFound: false, virtualAssetReferences: 0 };
 
   const checks = {
     document: documentOk ? 'pass' : 'fail',
     resources: refs.broken.length === 0 ? 'pass' : 'fail',
+    virtualAssets: generatedScan.virtualAssetReferences === 0 ? 'pass' : 'fail',
     components: missingComponents.length === 0 ? 'pass' : 'fail',
     navigation: refs.broken.filter((item) => item.reason === 'navigation').length === 0 ? 'pass' : 'fail',
     sourceIntegrity: sourceMismatches.length === 0 ? 'pass' : 'fail',
-    tracking: trackingFound ? 'fail' : 'pass',
+    tracking: generatedScan.trackingFound ? 'fail' : 'pass',
     outputIsolation: isolated ? 'pass' : 'fail',
   };
   const status = Object.values(checks).every((value) => value === 'pass') ? 'pass' : 'fail';
@@ -189,6 +200,7 @@ export async function verifyRebuild({ domainDir, rebuildRoot, manifest = {}, sou
       assetsReferenced: referencedAssets.length,
       assetsResolved: referencedAssets.length - brokenAssets.length,
       brokenLinks: refs.broken.length,
+      virtualAssetReferences: generatedScan.virtualAssetReferences,
       missingComponents: missingComponents.length,
       sourceMismatches: sourceMismatches.length,
       fontReferences: refs.fontReferences.length,
