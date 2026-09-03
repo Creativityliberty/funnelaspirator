@@ -40,9 +40,11 @@ export function sliceComponents({ html = '', occurrences = [] } = {}) {
 
   for (const occurrence of occurrences || []) {
     const element = locate($, occurrence.locator);
+    const occurrenceIndex = Number.isInteger(occurrence.index) ? occurrence.index : null;
     if (!element || !verifyFingerprint($, element, occurrence.locator)) {
       unresolved.push({
         componentId: occurrence.componentId || null,
+        occurrenceIndex,
         role: occurrence.role || null,
         locator: occurrence.locator || null,
         reason: element ? 'fingerprint-mismatch' : 'not-found',
@@ -53,17 +55,20 @@ export function sliceComponents({ html = '', occurrences = [] } = {}) {
     const markup = $.html(element);
     components.push({
       componentId: occurrence.componentId || null,
+      occurrenceIndex,
       role: occurrence.role || null,
+      variantId: occurrence.variantId || null,
       locator: occurrence.locator || null,
       markup,
     });
-    resolvedNodes.push({ occurrence, element });
+    resolvedNodes.push({ occurrence, occurrenceIndex, element });
   }
 
-  for (const { occurrence, element } of resolvedNodes) {
+  for (const { occurrence, occurrenceIndex, element } of resolvedNodes) {
     const marker = $('<div></div>')
       .attr('data-aspirator-component', occurrence.componentId || '')
       .attr('data-aspirator-role', occurrence.role || '');
+    if (occurrenceIndex != null) marker.attr('data-aspirator-occurrence', String(occurrenceIndex));
     $(element).replaceWith(marker);
   }
 
