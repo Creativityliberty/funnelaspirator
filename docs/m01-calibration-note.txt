@@ -1,0 +1,1 @@
+M01 calibration uses a 40-page Brand Appart export. Structural components are derived from captured HTML when page JSON has no components array. Preview paths use the original pages base plus captured asset URL mappings.
