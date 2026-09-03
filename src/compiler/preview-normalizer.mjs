@@ -42,6 +42,20 @@ function applyAssetMap(html, assetMap = {}) {
   return output;
 }
 
+function escapeAttribute(value = '') {
+  return String(value).replace(/&/g, '&amp;').replace(/"/g, '&quot;');
+}
+
+function injectBaseHref(html, baseHref) {
+  if (!baseHref) return html;
+  const tag = `<base href="${escapeAttribute(baseHref)}">`;
+  if (/<base\b[^>]*>/i.test(html)) return html.replace(/<base\b[^>]*>/i, tag);
+  if (/<head\b[^>]*>/i.test(html)) {
+    return html.replace(/<head\b[^>]*>/i, (head) => `${head}${tag}`);
+  }
+  return `${tag}${html}`;
+}
+
 function injectBridge(html) {
   const bridge = `<script data-aspirator-bridge>document.addEventListener('click',function(event){var link=event.target.closest('[data-aspirator-route]');if(!link)return;event.preventDefault();parent.postMessage({type:'aspirator:navigate',route:link.getAttribute('data-aspirator-route')},'*');});<\/script>`;
   return /<\/body>/i.test(html)
@@ -49,12 +63,13 @@ function injectBridge(html) {
     : html + bridge;
 }
 
-export function normalizePreviewHtml({ html = '', domain = '', assetMap = {} } = {}) {
+export function normalizePreviewHtml({ html = '', domain = '', assetMap = {}, baseHref = '' } = {}) {
   let output = String(html || '');
   output = stripTrackingScripts(output);
   output = stripBrokenNextSrcsets(output);
   output = applyAssetMap(output, assetMap);
   output = sandboxSameDomainLinks(output, domain);
+  output = injectBaseHref(output, baseHref);
   output = injectBridge(output);
   return output;
 }
