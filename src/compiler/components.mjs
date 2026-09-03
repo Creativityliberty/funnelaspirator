@@ -82,6 +82,7 @@ export function buildComponentRegistry(pages = []) {
         role,
         tag,
         classes: component.classes || component.className || '',
+        locator: component.locator || null,
         source: component,
       };
       group.occurrences.push(occurrence);
