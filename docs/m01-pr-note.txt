@@ -1,0 +1,1 @@
+M01 adds Site System Compiler, archetypes, component registry, local preview normalization, HTTP/MCP surfaces, Studio Explorer, tests, and CI. Main remains untouched until review.
