@@ -1,5 +1,8 @@
+const TRACKING_VALUE = /googletagmanager|google-analytics|facebook\.(?:net|com)|posthog|segment\.com|citeme\.io|visitors\.now|clarity\.ms|hotjar|plausible\.io/i;
+
 function safeValue(value) {
-  if (value == null || ['string', 'number', 'boolean'].includes(typeof value)) return value;
+  if (value == null || ['number', 'boolean'].includes(typeof value)) return value;
+  if (typeof value === 'string') return TRACKING_VALUE.test(value) ? undefined : value;
   if (Array.isArray(value)) {
     return value.map(safeValue).filter((item) => item !== undefined);
   }
