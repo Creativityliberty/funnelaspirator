@@ -1,0 +1,1 @@
+Switch load-export.mjs -> load-export-v2.mjs; page-signature.mjs -> page-signature-v2.mjs; archetypes.mjs -> archetypes-v2.mjs.
