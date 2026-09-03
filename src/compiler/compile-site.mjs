@@ -5,6 +5,7 @@ import { buildPageSignature } from './page-signature.mjs';
 import { clusterPages } from './archetypes.mjs';
 import { buildComponentRegistry } from './components.mjs';
 import { buildAssetRegistry } from './assets.mjs';
+import { buildPreviewAssetMap } from './asset-map.mjs';
 import { normalizePreviewHtml } from './preview-normalizer.mjs';
 import { SITE_SYSTEM_VERSION, assertInsideRoot } from './schema.mjs';
 
@@ -51,7 +52,7 @@ async function writeJson(target, value) {
   await fs.writeFile(target, `${JSON.stringify(value, null, 2)}\n`, 'utf8');
 }
 
-async function writePreviews({ root, domain, pages }) {
+async function writePreviews({ root, domain, pages, assetMap }) {
   const previewDir = assertInsideRoot(root, path.join(root, 'system', 'preview'));
   await fs.mkdir(previewDir, { recursive: true });
   const baseHref = `/exports/${encodeURIComponent(domain)}/pages/`;
@@ -67,7 +68,7 @@ async function writePreviews({ root, domain, pages }) {
       throw error;
     }
 
-    const normalized = normalizePreviewHtml({ html, domain, baseHref });
+    const normalized = normalizePreviewHtml({ html, domain, baseHref, assetMap });
     await fs.writeFile(path.join(previewDir, `${page.id}.html`), normalized, 'utf8');
   }
 }
@@ -83,6 +84,7 @@ export async function compileSiteSystem({ exportDir, write = true } = {}) {
   const archetypes = clusterPages(pagesWithSignatures);
   const components = buildComponentRegistry(pagesWithSignatures);
   const assets = await buildAssetRegistry(loaded.root);
+  const assetMap = buildPreviewAssetMap(pagesWithSignatures, loaded.domain);
   const pages = pagesWithSignatures.map((page) => publicPage(page, archetypes, components));
 
   const designSystem = Object.keys(loaded.designSystem || {}).length
@@ -116,7 +118,12 @@ export async function compileSiteSystem({ exportDir, write = true } = {}) {
   if (write) {
     const systemDir = assertInsideRoot(loaded.root, path.join(loaded.root, 'system'));
     await fs.mkdir(systemDir, { recursive: true });
-    await writePreviews({ root: loaded.root, domain: loaded.domain, pages: pagesWithSignatures });
+    await writePreviews({
+      root: loaded.root,
+      domain: loaded.domain,
+      pages: pagesWithSignatures,
+      assetMap,
+    });
     await Promise.all([
       writeJson(path.join(systemDir, 'site-system.json'), system),
       writeJson(path.join(systemDir, 'pages.json'), pages),
