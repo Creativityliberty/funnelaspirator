@@ -5,6 +5,8 @@ import { assertInsideRoot } from '../compiler/schema.mjs';
 import { RebuildError, REBUILD_CODES } from './errors.mjs';
 import { resolveRebuildPaths } from './paths.mjs';
 
+const TRACKING = /googletagmanager|google-analytics|facebook\.net|posthog|segment\.com|citeme\.io|visitors\.now|clarity\.ms|hotjar|plausible\.io/i;
+
 async function readJson(filePath) {
   return JSON.parse(await fs.readFile(filePath, 'utf8'));
 }
@@ -32,7 +34,17 @@ function legacyDataPath(page) {
   return path.posix.join('data', `${base}.json`);
 }
 
-function extractRefs(html) {
+function hiddenTrackingPixel(node, element) {
+  if (String(element.tagName || '').toLowerCase() !== 'img') return false;
+  const width = Number.parseFloat(node.attr('width') || '');
+  const height = Number.parseFloat(node.attr('height') || '');
+  const tiny = Number.isFinite(width) && Number.isFinite(height) && width <= 1 && height <= 1;
+  const style = String(node.attr('style') || '');
+  const hidden = /display\s*:\s*none|visibility\s*:\s*hidden|width\s*:\s*0|height\s*:\s*0|overflow\s*:\s*hidden/i.test(style);
+  return tiny && hidden;
+}
+
+export function extractRenderRefs(html) {
   const $ = cheerio.load(html || '');
   const styleRefs = [];
   const assetRefs = [];
@@ -48,22 +60,26 @@ function extractRefs(html) {
   });
 
   $('[src], [poster]').each((_i, element) => {
+    const node = $(element);
+    if (String(element.tagName || '').toLowerCase() === 'script') return;
+    if (hiddenTrackingPixel(node, element)) return;
+
     for (const attr of ['src', 'poster']) {
-      const value = $(element).attr(attr);
-      if (value && !seenAssets.has(value)) {
-        seenAssets.add(value);
-        assetRefs.push(value);
-      }
+      const value = node.attr(attr);
+      if (!value || TRACKING.test(value) || seenAssets.has(value)) continue;
+      seenAssets.add(value);
+      assetRefs.push(value);
     }
   });
 
   $('[srcset]').each((_i, element) => {
-    const srcset = $(element).attr('srcset') || '';
+    const node = $(element);
+    if (hiddenTrackingPixel(node, element)) return;
+    const srcset = node.attr('srcset') || '';
     for (const candidate of srcset.split(',').map((part) => part.trim().split(/\s+/)[0]).filter(Boolean)) {
-      if (!seenAssets.has(candidate)) {
-        seenAssets.add(candidate);
-        assetRefs.push(candidate);
-      }
+      if (TRACKING.test(candidate) || seenAssets.has(candidate)) continue;
+      seenAssets.add(candidate);
+      assetRefs.push(candidate);
     }
   });
 
@@ -149,7 +165,7 @@ export async function resolveArchetypeSource({ domainDir, archetypeId } = {}) {
     }
   }
 
-  const { styleRefs, assetRefs } = extractRefs(sourceHtml);
+  const { styleRefs, assetRefs } = extractRenderRefs(sourceHtml);
 
   return {
     system,
