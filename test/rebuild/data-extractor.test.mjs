@@ -38,3 +38,30 @@ test('data extractor keeps only serializable safe page values', () => {
     heading: 'Hello', count: 3, enabled: true, nested: { alt: 'Hero' },
   });
 });
+
+test('data extractor removes known tracking URLs from runtime data without removing legitimate media', () => {
+  const result = extractArchetypeData({
+    representativePage: {
+      id: 'page-001',
+      componentIds: ['cmp-hero'],
+      values: {
+        heading: 'Concrete',
+        image: '../assets/app.citeme.io/api/beacon/demo/pixel',
+        poster: 'assets/project/poster.jpg',
+        nested: {
+          tracker: 'https://www.facebook.com/tr?id=123&noscript=1',
+          caption: 'A real caption',
+        },
+      },
+    },
+    representativeComponents: ['cmp-hero'],
+    candidatePages: [],
+  });
+
+  assert.deepEqual(result.pages['page-001'], {
+    heading: 'Concrete',
+    nested: { caption: 'A real caption' },
+    poster: 'assets/project/poster.jpg',
+  });
+  assert.deepEqual(result.schema, ['heading', 'nested', 'poster']);
+});
