@@ -4,7 +4,7 @@ import path from 'path';
 import * as cheerio from 'cheerio';
 import { assertInsideRoot } from '../compiler/schema.mjs';
 import { resolveArchetypeSource } from './source-resolver.mjs';
-import { cleanRebuildDocument } from './dom-cleaner.mjs';
+import { cleanRebuildDocument, cleanRebuildFragment } from './dom-cleaner.mjs';
 import { sliceComponents } from './component-slicer.mjs';
 import { compileStyles } from './css-compiler.mjs';
 import { bindAssets } from './asset-binder.mjs';
@@ -275,6 +275,7 @@ export async function rebuildArchetype({ domainDir, archetypeId } = {}) {
 
     data = rewriteData(data, bound.rewrites);
     const rewrittenComponents = sliced.components
+      .map((component) => ({ ...component, markup: cleanRebuildFragment({ html: component.markup }).html }))
       .map(annotateComponent)
       .map((component) => ({ ...component, markup: rewriteFragment(component.markup, bound.rewrites) }));
     const rewrittenShell = rewriteMarkup(sliced.residualHtml, bound.rewrites);
