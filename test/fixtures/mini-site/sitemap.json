@@ -1,0 +1,23 @@
+[
+  {
+    "url": "https://example.test/",
+    "title": "Home",
+    "html": "pages/index.html",
+    "screenshot": "screenshots/index.png",
+    "data": "data/index.json"
+  },
+  {
+    "url": "https://example.test/work/alpha",
+    "title": "Alpha Project",
+    "html": "pages/work-alpha.html",
+    "screenshot": "screenshots/work-alpha.png",
+    "data": "data/work-alpha.json"
+  },
+  {
+    "url": "https://example.test/work/beta",
+    "title": "Beta Project",
+    "html": "pages/work-beta.html",
+    "screenshot": "screenshots/work-beta.png",
+    "data": "data/work-beta.json"
+  }
+]
