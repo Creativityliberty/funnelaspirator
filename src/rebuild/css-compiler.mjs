@@ -42,12 +42,16 @@ async function resolveStylesheet(sourceRoot, href) {
 
 function collectUrlRefs(css, cssFile, sourceRoot) {
   const refs = [];
+  const mappings = [];
   const regex = /url\(\s*(['"]?)([^)'"\s]+)\1\s*\)/gi;
   let match;
   while ((match = regex.exec(css))) {
     const raw = match[2];
     if (!raw || raw.startsWith('#') || EXTERNAL_URL.test(raw)) {
-      if (raw) refs.push(raw);
+      if (raw) {
+        refs.push(raw);
+        mappings.push({ raw, resolved: raw, external: true });
+      }
       continue;
     }
     const clean = stripQuery(raw);
@@ -55,12 +59,15 @@ function collectUrlRefs(css, cssFile, sourceRoot) {
       const absolute = clean.startsWith('/')
         ? assertInsideRoot(sourceRoot, path.join(sourceRoot, clean.slice(1)))
         : assertInsideRoot(sourceRoot, path.resolve(path.dirname(cssFile), clean));
-      refs.push(path.relative(sourceRoot, absolute).split(path.sep).join('/'));
+      const resolved = path.relative(sourceRoot, absolute).split(path.sep).join('/');
+      refs.push(resolved);
+      mappings.push({ raw, resolved, external: false });
     } catch {
       refs.push(raw);
+      mappings.push({ raw, resolved: raw, external: false, invalid: true });
     }
   }
-  return refs;
+  return { refs, mappings };
 }
 
 function extractBlocks(css, pattern) {
@@ -101,6 +108,7 @@ export async function compileStyles({ sourceHtml = '', sourceRoot, markup = '' }
   const sheets = [];
   const unresolved = [];
   const referencedUrls = [];
+  const urlMappings = [];
 
   for (const element of $('link[rel~="stylesheet"][href]').toArray()) {
     const href = $(element).attr('href');
@@ -111,14 +119,19 @@ export async function compileStyles({ sourceHtml = '', sourceRoot, markup = '' }
     }
     const css = await fs.readFile(resolved.path, 'utf8');
     sheets.push({ reference: href, path: resolved.path, css });
-    referencedUrls.push(...collectUrlRefs(css, resolved.path, root));
+    const found = collectUrlRefs(css, resolved.path, root);
+    referencedUrls.push(...found.refs);
+    urlMappings.push(...found.mappings);
   }
 
   $('style').each((_i, element) => {
     const css = $(element).html() || '';
     if (!css.trim()) return;
-    sheets.push({ reference: 'inline', path: path.join(root, 'pages', '__inline__.css'), css });
-    referencedUrls.push(...collectUrlRefs(css, path.join(root, 'pages', '__inline__.css'), root));
+    const inlinePath = path.join(root, 'pages', '__inline__.css');
+    sheets.push({ reference: 'inline', path: inlinePath, css });
+    const found = collectUrlRefs(css, inlinePath, root);
+    referencedUrls.push(...found.refs);
+    urlMappings.push(...found.mappings);
   });
 
   const cssText = sheets.map((sheet) => sheet.css.trim()).filter(Boolean).join('\n\n');
@@ -136,6 +149,7 @@ export async function compileStyles({ sourceHtml = '', sourceRoot, markup = '' }
       componentsCss: cssText,
     },
     referencedUrls: unique(referencedUrls),
+    urlMappings,
     unresolved,
     mode: 'conservative',
     stylesheets: sheets.map((sheet) => ({
