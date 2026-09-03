@@ -5,6 +5,8 @@ import { assertInsideRoot } from '../compiler/schema.mjs';
 
 const EXTERNAL = /^(?:https?:|data:|blob:|\/\/)/i;
 const FONT_EXT = /\.(?:woff2?|ttf|otf)(?:$|[?#])/i;
+const EXECUTABLE_EXT = /\.(?:js|mjs|cjs)(?:$|[?#])/i;
+const TRACKING = /googletagmanager|google-analytics|facebook\.net|posthog|segment\.com|citeme\.io|visitors\.now|clarity\.ms|hotjar|plausible\.io/i;
 const NEXT_IMAGE_OPTIMIZER = /^\/?_next\/image\?/i;
 const CAPTURED_ASSET_PARENT = /^(?:\.\.\/)+assets\//;
 
@@ -72,12 +74,16 @@ export async function bindAssets({ references = [], sourceRoot, rebuildRoot, ass
   const external = [];
   const unresolved = [];
   const fontReferences = [];
+  const ignored = [];
   const seen = new Map();
 
   for (const rawReference of references || []) {
     const reference = String(rawReference || '').trim();
     if (!reference || reference.startsWith('#')) continue;
-    if (NEXT_IMAGE_OPTIMIZER.test(reference)) continue;
+    if (NEXT_IMAGE_OPTIMIZER.test(reference) || EXECUTABLE_EXT.test(reference) || TRACKING.test(reference)) {
+      ignored.push(reference);
+      continue;
+    }
     if (EXTERNAL.test(reference)) {
       external.push(reference);
       continue;
@@ -121,5 +127,6 @@ export async function bindAssets({ references = [], sourceRoot, rebuildRoot, ass
     external: [...new Set(external)],
     unresolved,
     fontReferences: [...new Set(fontReferences)],
+    ignored: [...new Set(ignored)],
   };
 }
