@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { cleanRebuildDocument } from '../../src/rebuild/dom-cleaner.mjs';
+import { cleanRebuildDocument, cleanRebuildFragment } from '../../src/rebuild/dom-cleaner.mjs';
 
 test('cleaner removes tracking/framework scripts while preserving accessible state', () => {
   const result = cleanRebuildDocument({ html: `
@@ -33,6 +33,19 @@ test('cleaner removes captured Next image optimizer srcsets while keeping local 
   ` });
   assert.doesNotMatch(result.html, /srcset=/i);
   assert.match(result.html, /src="\.\.\/assets\/www\.example\.com\/_next\/image-local\.jpg"/);
+});
+
+test('fragment cleaner removes virtual Next srcsets and trackers without wrapping component markup', () => {
+  const markup = `
+    <section class="chapter">
+      <img src="assets/local.jpg" srcset="/_next/image?url=https%3A%2F%2Fcdn.example.com%2Fhero.webp&w=1200&q=75 1200w" alt="Hero">
+      <noscript><img src="https://www.facebook.com/tr?id=1&noscript=1" width="1" height="1"></noscript>
+    </section>`;
+  const result = cleanRebuildFragment({ html: markup });
+  assert.match(result.html, /^\s*<section class="chapter">/);
+  assert.doesNotMatch(result.html, /srcset=|\/_next\/image\?|facebook\.com\/tr/i);
+  assert.match(result.html, /src="assets\/local\.jpg"/);
+  assert.doesNotMatch(result.html, /<html|<body/i);
 });
 
 test('cleaner removes non-functional source hints, tracker noscript and hidden tracking pixels', () => {
