@@ -16,17 +16,19 @@ test('manifest entity lookup is id-based', () => {
   assert.throws(() => findById([], 'page-999', 'page'), /page not found/);
 });
 
-test('registerSystemRoutes exposes M01 under a non-conflicting system namespace', () => {
+test('registerSystemRoutes preserves M01 and adds the isolated M02 rebuild namespace', () => {
   const routes = [];
   const app = {
     get: (route, handler) => routes.push(['GET', route, handler]),
     post: (route, handler) => routes.push(['POST', route, handler]),
   };
   registerSystemRoutes(app, { exportsDir: '/tmp/exports' });
-  assert.equal(routes.length, 9);
+  assert.equal(routes.length, 13);
   assert.ok(routes.some(([method, route]) => method === 'POST' && route === '/api/results/:domain/compile'));
   assert.ok(routes.some(([method, route]) => method === 'GET' && route === '/api/results/:domain/system'));
   assert.ok(routes.some(([method, route]) => method === 'GET' && route === '/api/results/:domain/system/components'));
   assert.ok(routes.some(([method, route]) => method === 'GET' && route === '/api/results/:domain/system/preview/:pageId'));
+  assert.ok(routes.some(([method, route]) => method === 'POST' && route === '/api/results/:domain/system/rebuild/archetypes/:archetypeId'));
+  assert.ok(routes.some(([method, route]) => method === 'GET' && route === '/api/results/:domain/system/rebuild/archetypes/:archetypeId/preview'));
   assert.equal(routes.some(([method, route]) => method === 'GET' && route === '/api/results/:domain/components'), false);
 });
