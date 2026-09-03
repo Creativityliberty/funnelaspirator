@@ -17,6 +17,7 @@ async function writeText(root, relative, content) {
 function buildIndex(shellHtml) {
   const $ = cheerio.load(shellHtml || '<!doctype html><html><head></head><body></body></html>');
   $('script').remove();
+  $('link[rel~="stylesheet"]').remove();
   $('link[data-aspirator-runtime]').remove();
   for (const href of [
     './styles/tokens.css',
@@ -95,9 +96,7 @@ function buildComponentMap(components) {
       grouped[id] = component.markup;
       continue;
     }
-    if (typeof grouped[id] === 'string') {
-      grouped[id] = { default: grouped[id] };
-    }
+    if (typeof grouped[id] === 'string') grouped[id] = { default: grouped[id] };
     if (!grouped[id] || typeof grouped[id] !== 'object') grouped[id] = {};
     grouped[id][index ?? 'default'] = component.markup;
   }
