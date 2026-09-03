@@ -126,6 +126,30 @@ test('verifier fails when generated JS or JSON still contains known tracking dat
   }
 });
 
+test('verifier fails when generated runtime still contains virtual Next image optimizer references', async () => {
+  const rebuildRoot = await makeTree();
+  await fs.writeFile(
+    path.join(rebuildRoot, 'components', 'registry.js'),
+    `export const components={'cmp-hero':'<img src="assets/hero.jpg" srcset="/_next/image?url=x&w=1200&q=75 1200w">'};\n`,
+  );
+  try {
+    const report = await verifyRebuild({
+      domainDir: rebuildRoot,
+      rebuildRoot,
+      manifest: {
+        componentIds: ['cmp-hero'],
+        generatedFiles: ['index.html', 'app.js', 'assets/hero.jpg', 'components/registry.js'],
+      },
+      sourceHashes: {},
+    });
+    assert.equal(report.checks.virtualAssets, 'fail');
+    assert.equal(report.status, 'fail');
+    assert.equal(report.metrics.virtualAssetReferences, 1);
+  } finally {
+    await fs.rm(rebuildRoot, { recursive: true, force: true });
+  }
+});
+
 test('verifier detects mutated source evidence', async () => {
   const domainDir = await fs.mkdtemp(path.join(os.tmpdir(), 'aspirator-source-integrity-'));
   const rebuildRoot = path.join(domainDir, 'rebuild-output');
