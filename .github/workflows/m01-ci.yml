@@ -38,16 +38,24 @@ jobs:
       - name: Unit and contract tests
         run: npm test
 
-      - name: Server smoke test
+      - name: Server and MCP smoke test
         run: |
           npm run dev > /tmp/aspirator-server.log 2>&1 &
           SERVER_PID=$!
           trap 'kill $SERVER_PID 2>/dev/null || true' EXIT
+
+          READY=0
           for attempt in {1..20}; do
             if curl --fail --silent http://127.0.0.1:3000/ > /dev/null; then
-              exit 0
+              READY=1
+              break
             fi
             sleep 1
           done
-          cat /tmp/aspirator-server.log
-          exit 1
+
+          if [ "$READY" -ne 1 ]; then
+            cat /tmp/aspirator-server.log
+            exit 1
+          fi
+
+          npm run test:mcp
